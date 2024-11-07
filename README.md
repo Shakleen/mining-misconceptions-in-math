@@ -12,7 +12,7 @@ $$ \text{MAP@25} = \frac{1}{U} \sum_{u=1}^{U} \sum_{k=1}^{min(n,25)} P(k) \times
 ## TODO Tree
 
 - [X] Create contrastive dataset
-- [ ] Implement MAP@25 metric
+- [X] Implement MAP@25 metric
 - [ ] Model development
 - [ ] Training loop
 - [ ] Inference pipeline
