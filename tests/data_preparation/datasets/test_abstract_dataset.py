@@ -1,6 +1,8 @@
 import pytest
 import pandas as pd
+
 from src.data_preparation.datasets.abstract_dataset import AbstractDataset
+from src.constants.column_names import ContrastiveCSVColumns
 
 
 class Dataset(AbstractDataset):
@@ -33,9 +35,8 @@ def test_getitem(dataset: Dataset):
 
 
 def test_split_misconception_list(dataset: Dataset):
-    delimiter = "###"
-    misconception_text = delimiter.join(["a", "b", "c"])
-    assert dataset.split_misconception_list(misconception_text, delimiter) == [
+    misconception_text = ContrastiveCSVColumns.DELIMITER.join(["a", "b", "c"])
+    assert dataset.split_misconception_list(misconception_text) == [
         "a",
         "b",
         "c",

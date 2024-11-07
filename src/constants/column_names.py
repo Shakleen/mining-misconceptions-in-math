@@ -30,3 +30,16 @@ class MisconceptionsCSVColumns:
 
     MISCONCEPTION_ID = "MisconceptionId"
     MISCONCEPTION_NAME = "MisconceptionName"
+
+
+class ContrastiveCSVColumns:
+    """Column names for the contrastive dataset."""
+
+    QUESTION_ID = "QuestionId"
+    SUBJECT_ID = "SubjectId"
+    CONSTRUCT_ID = "ConstructId"
+    QUESTION_DETAILS = "QuestionDetails"
+    MISCONCEPTION_LIST = "MisconceptionList"
+    LABEL = "Label"
+    MISCONCEPTION_ID = "MisconceptionId"
+    DELIMITER = "###"

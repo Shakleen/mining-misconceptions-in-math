@@ -5,6 +5,8 @@ from torch.utils.data import Dataset
 from transformers import AutoTokenizer
 import pandas as pd
 
+from src.constants.column_names import ContrastiveCSVColumns
+
 
 class AbstractDataset(Dataset, ABC):
     def __init__(
@@ -38,9 +40,7 @@ class AbstractDataset(Dataset, ABC):
         """
         return len(self.df)
 
-    def split_misconception_list(
-        self, misconception_text: str, delimiter: str = "###"
-    ) -> list[str]:
+    def split_misconception_list(self, misconception_text: str) -> list[str]:
         """Split a misconception text into a list of misconception texts.
 
         For example, if the misconception text is "a###b###c", the output will be ["a", "b", "c"].
@@ -51,7 +51,7 @@ class AbstractDataset(Dataset, ABC):
         Returns:
             list[str]: List of misconception texts.
         """
-        misconception_list = misconception_text.split(delimiter)
+        misconception_list = misconception_text.split(ContrastiveCSVColumns.DELIMITER)
         misconception_list = [
             misconception.strip() for misconception in misconception_list
         ]

@@ -5,3 +5,4 @@ class WandbProject:
     TRAIN_DATASET_NAME = "train-dataset"
     TEST_DATASET_NAME = "test-dataset"
     MISCONCEPTIONS_DATASET_NAME = "misconceptions-dataset"
+    CONTRASTIVE_DATASET_NAME = "contrastive-dataset"
