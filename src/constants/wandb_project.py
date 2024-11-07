@@ -1,10 +1,7 @@
-from enum import Enum
-
-
-class WandbProject(Enum):
+class WandbProject:
     """Enum for the names of the datasets and the project."""
 
     PROJECT_NAME = "Kaggle_EEDI"
-    TRAIN_DATASET = "train-dataset"
-    TEST_DATASET = "test-dataset"
-    MISCONCEPTIONS_DATASET = "misconceptions-dataset"
+    TRAIN_DATASET_NAME = "train-dataset"
+    TEST_DATASET_NAME = "test-dataset"
+    MISCONCEPTIONS_DATASET_NAME = "misconceptions-dataset"

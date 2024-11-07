@@ -1,7 +1,4 @@
-from enum import Enum
-
-
-class TrainCSVColumns(Enum):
+class TrainCSVColumns:
     """Column names for the train dataset."""
 
     QUESTION_ID = "QuestionId"
@@ -28,7 +25,7 @@ class TrainCSVColumns(Enum):
     MISCONCEPTION_FORMAT = "Misconception{option}Id"
 
 
-class MisconceptionsCSVColumns(Enum):
+class MisconceptionsCSVColumns:
     """Column names for the misconceptions dataset."""
 
     MISCONCEPTION_ID = "MisconceptionId"

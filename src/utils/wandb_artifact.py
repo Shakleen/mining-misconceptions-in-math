@@ -148,3 +148,46 @@ def _create_temp_csv(df: pd.DataFrame, prefix: str = "dataset") -> str:
     df.to_csv(temp_file, index=False)
 
     return temp_file
+
+
+if __name__ == "__main__":
+    from src.constants.wandb_project import WandbProject
+    from src.constants.paths import Paths
+
+    train_df = pd.read_csv(Paths.TRAIN_COMPETITION_DATA)
+    test_df = pd.read_csv(Paths.TEST_COMPETITION_DATA)
+    misconception_mapping_df = pd.read_csv(Paths.MISCONCEPTIONS_MAPPING_DATA)
+
+    wandb.init(project=WandbProject.PROJECT_NAME, name="original-datasets")
+
+    try:
+        # Log train dataset
+        log_dataframe_artifact(
+            train_df,
+            WandbProject.TRAIN_DATASET_NAME,
+            "dataset",
+            "Train dataset for the Kaggle competition",
+        )
+
+        # Log test dataset
+        log_dataframe_artifact(
+            test_df,
+            WandbProject.TEST_DATASET_NAME,
+            "dataset",
+            "Test dataset for the Kaggle competition",
+        )
+
+        # Log misconceptions dataset
+        log_dataframe_artifact(
+            misconception_mapping_df,
+            WandbProject.MISCONCEPTIONS_DATASET_NAME,
+            "dataset",
+            "Misconceptions dataset for the Kaggle competition",
+        )
+
+    except Exception as e:
+        print(f"Error logging artifacts: {e}")
+
+    finally:
+        # Close the wandb run
+        wandb.finish()
