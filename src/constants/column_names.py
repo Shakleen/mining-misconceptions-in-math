@@ -43,3 +43,18 @@ class ContrastiveCSVColumns:
     LABEL = "Label"
     MISCONCEPTION_ID = "MisconceptionId"
     DELIMITER = "###"
+
+
+class ContrastiveTorchDatasetColumns:
+    """Column names for the random contrastive torch dataset."""
+
+    QUESTION_IDS = "question_ids"
+    QUESTION_MASK = "question_mask"
+    MISCONCEPTION_IDS = "misconception_ids"
+    MISCONCEPTION_MASK = "misconception_mask"
+    LABEL = "label"
+    META_DATA_QUESTION_ID = "meta_data_question_id"
+    META_DATA_SUBJECT_ID = "meta_data_subject_id"
+    META_DATA_CONSTRUCT_ID = "meta_data_construct_id"
+    META_DATA_MISCONCEPTION_ID = "meta_data_misconception_id"
+    META_DATA_SORTED_MISCONCEPTION_ID_LIST = "meta_data_sorted_misconception_id_list"
