@@ -2,5 +2,10 @@
     "files.exclude": {
         "**/build": true,
         "**/Mining_Misconceptions_in_Math*": true
-    }
+    },
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }
