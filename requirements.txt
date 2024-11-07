@@ -1,0 +1,6 @@
+cffi==1.17.1
+identify==2.6.1
+Mining-Misconceptions-in-Math @ file:///media/ishrak/New%20Volume/Studies/Projects/mining-misconceptions-in-math
+pycparser==2.22
+setup-py-upgrade==1.3.1
+ukkonen==1.0.1

@@ -1,0 +1,6 @@
+{
+    "files.exclude": {
+        "**/build": true,
+        "**/Mining_Misconceptions_in_Math*": true
+    }
+}
