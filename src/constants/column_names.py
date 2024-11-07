@@ -58,3 +58,14 @@ class ContrastiveTorchDatasetColumns:
     META_DATA_CONSTRUCT_ID = "meta_data_construct_id"
     META_DATA_MISCONCEPTION_ID = "meta_data_misconception_id"
     META_DATA_SORTED_MISCONCEPTION_ID_LIST = "meta_data_sorted_misconception_id_list"
+
+
+class EvaluationCSVColumns:
+    """Column names for the evaluation dataset."""
+
+    QUESTION_ID = "QuestionId"
+    SUBJECT_ID = "SubjectId"
+    CONSTRUCT_ID = "ConstructId"
+    ACTUAL_INDEX = "ActualIndex"
+    RANKINGS = "Rankings"
+    MAP = "MAP"
