@@ -77,5 +77,9 @@ class AbstractDataset(Dataset, ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
-    def collate_fn(self, batch: List[Dict[str, torch.Tensor]]):
+    def collate_fn(
+        self,
+        batch: List[Dict[str, torch.Tensor]],
+        include_meta_data: Optional[bool] = False,
+    ):
         raise NotImplementedError("Subclasses must implement this method")
