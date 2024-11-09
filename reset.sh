@@ -1,2 +1,2 @@
-python setup.py clean --all install clean --all
+python setup.py clean --all
 pip install .

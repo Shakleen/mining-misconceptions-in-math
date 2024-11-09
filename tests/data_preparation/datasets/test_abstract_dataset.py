@@ -9,6 +9,9 @@ class Dataset(AbstractDataset):
     def __getitem__(self, idx):
         return self.df.iloc[idx]
 
+    def collate_fn(self, batch):
+        return batch
+
 
 @pytest.fixture
 def dataset():
@@ -22,7 +25,7 @@ def test_abstract_dataset():
 
 
 def test_has_abstract_methods():
-    assert AbstractDataset.__abstractmethods__ == {"__getitem__"}
+    assert AbstractDataset.__abstractmethods__ == {"__getitem__", "collate_fn"}
 
 
 def test_len(dataset: Dataset):

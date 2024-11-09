@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, List, Dict
 
+import torch
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
 import pandas as pd
@@ -73,4 +74,8 @@ class AbstractDataset(Dataset, ABC):
 
     @abstractmethod
     def __getitem__(self, idx):
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def collate_fn(self, batch: List[Dict[str, torch.Tensor]]):
         raise NotImplementedError("Subclasses must implement this method")
