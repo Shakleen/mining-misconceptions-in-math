@@ -13,8 +13,12 @@ $$ \text{MAP@25} = \frac{1}{U} \sum_{u=1}^{U} \sum_{k=1}^{min(n,25)} P(k) \times
 
 - [X] Create contrastive dataset
 - [X] Implement MAP@25 metric
-- [ ] Model development
-- [ ] Training loop
+- [X] Model development
+- [ ] Training pipeline
+  - [ ] QLoRA
+  - [ ] K-fold Cross validation
+  - [ ] Checkpointing
+  - [ ] Logging to W&B
 - [ ] Inference pipeline
 
 ## License
