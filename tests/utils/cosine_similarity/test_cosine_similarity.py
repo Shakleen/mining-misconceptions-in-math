@@ -17,6 +17,7 @@ def test_cosine_similarity_dll_init(cosine_similarity_dll):
 
 @pytest.mark.parametrize("size", [256, 512, 1024, 2048, 4096])
 def test_cosine_similarity_dll(cosine_similarity_dll, size):
+    np.random.seed(42)
     arr1 = np.random.rand(size)
     arr2 = np.random.rand(size)
 
