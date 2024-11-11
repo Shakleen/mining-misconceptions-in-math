@@ -27,6 +27,9 @@ class CosineSimilarity:
         """
         Calculate the cosine similarity between two vectors.
 
+        Throws:
+            AssertionError: If vectors are not 1D or have different shapes
+
         Args:
             vec1 (np.ndarray): First vector.
             vec2 (np.ndarray): Second vector.
@@ -34,6 +37,9 @@ class CosineSimilarity:
         Returns:
             float: Cosine similarity between the two vectors.
         """
+        assert vec1.ndim == 1 and vec2.ndim == 1, "Vectors must be 1D"
+        assert vec1.shape == vec2.shape, "Vectors must have the same shape"
+
         vec1 = vec1.astype(np.float32)
         vec2 = vec2.astype(np.float32)
 

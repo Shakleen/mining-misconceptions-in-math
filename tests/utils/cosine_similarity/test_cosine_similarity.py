@@ -24,3 +24,19 @@ def test_cosine_similarity_dll(cosine_similarity_dll, size):
     actual = cosine_similarity_dll.calculate(arr1, arr2)
 
     assert round(actual, 5) == round(expected, 5)
+
+
+def test_cosine_similarity_dll_raises_error_on_different_shapes(cosine_similarity_dll):
+    arr1 = np.random.rand(1024)
+    arr2 = np.random.rand(1025)
+
+    with pytest.raises(AssertionError):
+        cosine_similarity_dll.calculate(arr1, arr2)
+
+
+def test_cosine_similarity_dll_raises_error_on_non_1d_vectors(cosine_similarity_dll):
+    arr1 = np.random.rand(1024, 1)
+    arr2 = np.random.rand(1024)
+
+    with pytest.raises(AssertionError):
+        cosine_similarity_dll.calculate(arr1, arr2)

@@ -45,6 +45,9 @@ class SimilaritySearcher:
         """
         Search for most similar vectors to a single query vector.
 
+        Throws:
+            AssertionError: If query and database are not 1D and 2D arrays respectively or have different vector dimensions
+
         Args:
             query (np.ndarray): Query vector of shape (vector_dim,)
             database (np.ndarray): Database of vectors of shape (num_vectors, vector_dim)
@@ -54,6 +57,9 @@ class SimilaritySearcher:
         Returns:
             np.ndarray: Indices of top-K most similar vectors
         """
+        assert query.ndim == 1 and database.ndim == 2, "Query and database must be 1D and 2D arrays respectively"
+        assert query.shape[0] == database.shape[1], "Query and database must have the same vector dimension"
+
         query = np.ascontiguousarray(query, dtype=np.float32)
         database = np.ascontiguousarray(database, dtype=np.float32)
 
@@ -78,6 +84,9 @@ class SimilaritySearcher:
         """
         Search for most similar vectors for multiple queries in batch.
 
+        Throws:
+            AssertionError: If queries and database are not 2D arrays or have different vector dimensions
+
         Args:
             queries (np.ndarray): Query vectors of shape (num_queries, vector_dim)
             database (np.ndarray): Database of vectors of shape (num_vectors, vector_dim)
@@ -88,6 +97,9 @@ class SimilaritySearcher:
             np.ndarray: Indices of top-K most similar vectors for each query
                        Shape: (num_queries, TOP_K)
         """
+        assert queries.ndim == 2 and database.ndim == 2, "Queries and database must be 2D arrays respectively"
+        assert queries.shape[1] == database.shape[1], "Queries and database must have the same vector dimension"
+
         queries = np.ascontiguousarray(queries, dtype=np.float32)
         database = np.ascontiguousarray(database, dtype=np.float32)
 
