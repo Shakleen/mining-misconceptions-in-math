@@ -1,5 +1,6 @@
 {
     "files.exclude": {
+        "**/.cache": true,
         "**/build": true,
         "**/Mining_Misconceptions_in_Math*": true
     },
