@@ -1,12 +1,15 @@
-import os
 import torch
-import pytorch_lightning as pl
-from transformers import AutoModel
 import torch.nn.functional as F
+import pytorch_lightning as pl
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+from peft import prepare_model_for_kbit_training
+from peft import LoraConfig, get_peft_model
 
 from src.constants.column_names import ContrastiveTorchDatasetColumns
 from src.evaluation.map_calculator.map_calculator import MAPCalculator
 from src.model_development.loss_functions import info_nce_loss
+from src.constants.dll_paths import DLLPaths
+from src.configurations.recall_model_config import RecallModelConfig
 
 
 class RecallModel(pl.LightningModule):
@@ -14,35 +17,51 @@ class RecallModel(pl.LightningModule):
     def TorchColNames(self):
         return ContrastiveTorchDatasetColumns
 
-    def __init__(
-        self,
-        model_path: str,
-        fold: int,
-        optimizer,
-        scheduler,
-        map_calculator: MAPCalculator,
-    ):
+    def __init__(self, config: RecallModelConfig):
         super().__init__()
-        self.save_hyperparameters()
+        self.config = config
 
-        self.optimizer = optimizer
-        self.scheduler = scheduler
-        self.map_calculator = map_calculator
+        self.map_calculator = MAPCalculator(DLLPaths.MAP_CALCULATOR)
 
-        self.model = AutoModel.from_pretrained(model_path, trust_remote_code=True)
-
-        vector_dim = 1024
-        self.vector_linear = torch.nn.Linear(
-            in_features=self.model.config.hidden_size,
-            out_features=vector_dim,
+        self.model = AutoModelForCausalLM.from_pretrained(
+            config.model_path,
+            quantization_config=BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+            ),
+            device_map="auto",
+            trust_remote_code=True,
         )
-        self.vector_linear.load_state_dict(
-            {
-                k.replace("linear.", ""): v
-                for k, v in torch.load(
-                    os.path.join(model_path, f"2_Dense_{vector_dim}/pytorch_model.bin")
-                ).items()
-            }
+
+        if config.gradient_checkpointing:
+            self.model.gradient_checkpointing_enable()
+
+        self.model = prepare_model_for_kbit_training(self.model)
+
+        self.model = get_peft_model(
+            self.model,
+            LoraConfig(
+                r=config.lora_r,
+                lora_alpha=config.lora_alpha,
+                target_modules=[
+                    "q_proj",
+                    "v_proj",
+                    "k_proj",
+                    "o_proj",
+                    "gate_proj",
+                    "up_proj",
+                    "down_proj",
+                ],
+                lora_dropout=config.lora_dropout,
+                bias="none",
+                task_type="CAUSAL_LM",
+            ),
+        )
+
+        self.vector_linear = torch.nn.Linear(
+            self.model.config.vocab_size, config.output_dim
         )
 
     def get_features(self, input_ids: torch.Tensor, attention_mask: torch.Tensor):
@@ -109,13 +128,13 @@ class RecallModel(pl.LightningModule):
             "val",
         ], "Invalid phase. Must be either 'train' or 'val'."
 
-        self.log(f"{phase}_loss_{self.hparams.fold}", loss)
-        self.log(f"{phase}_accuracy_{self.hparams.fold}", accuracy)
-        self.log(f"{phase}_map_{self.hparams.fold}", map)
+        self.log(f"{phase}_loss_{self.config.fold}", loss)
+        self.log(f"{phase}_accuracy_{self.config.fold}", accuracy)
+        self.log(f"{phase}_map_{self.config.fold}", map)
 
         if phase == "train":
             self.log(
-                f"learning_rate_{self.hparams.fold}",
+                f"learning_rate_{self.config.fold}",
                 self.optimizers().param_groups[0]["lr"],
             )
 
@@ -171,10 +190,19 @@ class RecallModel(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(
+            self.parameters(),
+            lr=self.config.learning_rate,
+        )
+        scheduler = torch.optim.lr_scheduler.CyclicLR(
+            optimizer,
+            base_lr=self.config.learning_rate,
+            max_lr=self.config.learning_rate * 10,
+        )
         return {
-            "optimizer": self.optimizer,
+            "optimizer": optimizer,
             "lr_scheduler": {
-                "scheduler": self.scheduler,
+                "scheduler": scheduler,
                 "interval": "epoch",
             },
         }

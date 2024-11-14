@@ -20,14 +20,6 @@ def info_nce_loss(
     Returns:
         loss: Mean InfoNCE loss across the batch
     """
-    # Apply temperature scaling
     similarities = similarities / temperature
-
-    # Convert labels to the format expected by cross_entropy
-    # labels already contain the indices of positive examples
-
-    # Calculate log_softmax across rows and gather the positive similarity scores
-    log_prob = F.log_softmax(similarities, dim=1)
-    loss = F.nll_loss(log_prob, labels)
-
+    loss = F.cross_entropy(similarities, labels, reduction="mean")
     return loss

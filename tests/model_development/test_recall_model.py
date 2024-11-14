@@ -2,16 +2,17 @@ import pytest
 import torch
 
 from src.model_development.recall_model import RecallModel
+from src.configurations.recall_model_config import RecallModelConfig
 
 
 @pytest.fixture(scope="module")
-def recall_model():
-    model_path = "output_dir/stella_v0/model"
-    fold = 0
-    optimizer = None
-    scheduler = None
-    map_calculator = None
-    return RecallModel(model_path, fold, optimizer, scheduler, map_calculator).eval()
+def config():
+    return RecallModelConfig(".cache/Mistral-7B-v0.1", 0)
+
+
+@pytest.fixture(scope="module")
+def recall_model(config: RecallModelConfig):
+    return RecallModel(config).eval()
 
 
 def test_init(recall_model: RecallModel):
@@ -27,11 +28,13 @@ def test_module_attributes(recall_model: RecallModel):
     ("batch_size", "seq_len"),
     [(4, 10), (8, 20), (16, 30)],
 )
-def test_get_features(recall_model: RecallModel, batch_size: int, seq_len: int):
+def test_get_features(
+    config: RecallModelConfig, recall_model: RecallModel, batch_size: int, seq_len: int
+):
     input_ids = torch.randint(0, 10000, (batch_size, seq_len))
     attention_mask = torch.ones((batch_size, seq_len))
     features = recall_model.get_features(input_ids, attention_mask)
-    assert features.shape == (batch_size, 1024)
+    assert features.shape == (batch_size, config.output_dim)
 
 
 @pytest.mark.parametrize(
