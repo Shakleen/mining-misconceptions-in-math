@@ -43,19 +43,19 @@ class LatentAttentionLayer(nn.Module):
         Forward pass of the Latent Attention Layer with MLP and mean pooling.
 
         Args:
-            Q (torch.Tensor): Query tensor from the decoder, shape [l, batch_size, d]
+            Q (torch.Tensor): Query tensor from the decoder, shape [batch_size, seq_len, d]
 
         Returns:
             torch.Tensor: Pooled output tensor, shape [batch_size, d]
         """
-        # Repeat the latent array for each item in the batch
-        batch_size = Q.size(1)
-        K = self.latent_array.unsqueeze(1).expand(
-            -1, batch_size, -1
-        )  # Shape [r, batch_size, d]
-
         # Project the input query
         Q = self.input_proj(Q)
+
+        # Repeat the latent array for each item in the batch
+        seq_len = Q.size(1)
+        K = self.latent_array.unsqueeze(1).expand(
+            -1, seq_len, -1
+        )  # Shape [r, batch_size, d]
 
         # Cross-attention between Q and K
         O, _ = self.attention(query=Q, key=K, value=K)  # O has shape [l, batch_size, d]
