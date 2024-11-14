@@ -12,3 +12,13 @@ class RecallModelConfig:
     learning_rate: float = 1e-4
     gradient_checkpointing: bool = True
     output_dim: int = 1024
+    sentence_pooling_method: str = "cls"
+
+    def __post_init__(self):
+        allowed_sentence_pooling_methods = {"mean", "cls", "last", "attention"}
+
+        if self.sentence_pooling_method not in allowed_sentence_pooling_methods:
+            raise ValueError(
+                f"Invalid sentence pooling method '{self.sentence_pooling_method}'. "
+                + f"Must be one of {allowed_sentence_pooling_methods}."
+            )

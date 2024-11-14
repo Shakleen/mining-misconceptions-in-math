@@ -1,4 +1,5 @@
 import torch
+from torch import Tensor
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig
@@ -64,17 +65,44 @@ class RecallModel(pl.LightningModule):
             self.model.config.vocab_size, config.output_dim
         )
 
+    def last_token_pool(
+        self, last_hidden_states: Tensor, attention_mask: Tensor
+    ) -> Tensor:
+        left_padding = attention_mask[:, -1].sum() == attention_mask.shape[0]
+
+        if left_padding:
+            return last_hidden_states[:, -1]
+        else:
+            sequence_lengths = attention_mask.sum(dim=1) - 1
+            batch_size = last_hidden_states.shape[0]
+            return last_hidden_states[
+                torch.arange(batch_size, device=last_hidden_states.device),
+                sequence_lengths,
+            ]
+
+    def pool_sentence_embedding(self, sentence_pooling_method, hidden_state, mask):
+        if sentence_pooling_method == "mean":
+            s = torch.sum(hidden_state * mask.unsqueeze(-1).float(), dim=1)
+            d = mask.sum(axis=1, keepdim=True).float()
+            return s / d
+        elif sentence_pooling_method == "cls":
+            return hidden_state[:, 0]
+        elif sentence_pooling_method == "last":
+            return self.last_token_pool(hidden_state, mask)
+        elif sentence_pooling_method == "attention":
+            raise NotImplementedError("Attention pooling is not implemented yet.")
+
     def get_features(self, input_ids: torch.Tensor, attention_mask: torch.Tensor):
         last_hidden_state = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
         )[0]
-        last_hidden = last_hidden_state.masked_fill(
-            ~attention_mask[..., None].bool(), 0.0
+        features = self.pool_sentence_embedding(
+            self.config.sentence_pooling_method,
+            last_hidden_state,
+            attention_mask,
         )
-        features = last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
-        features = F.normalize(self.vector_linear(features), p=2, dim=1)
-        return features
+        return F.normalize(self.vector_linear(features), p=2, dim=1)
 
     def forward(
         self,
