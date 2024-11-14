@@ -11,6 +11,10 @@ class RecallModelConfig:
     lora_dropout: float = 0.05
     learning_rate: float = 1e-4
     gradient_checkpointing: bool = True
+    hidden_dim: int = 512
+    num_latents: int = 512
+    num_heads: int = 8
+    mlp_dim: int = 1024
     output_dim: int = 1024
     sentence_pooling_method: str = "cls"
 

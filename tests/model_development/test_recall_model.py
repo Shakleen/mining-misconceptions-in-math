@@ -21,7 +21,43 @@ def test_init(recall_model: RecallModel):
 
 def test_module_attributes(recall_model: RecallModel):
     assert hasattr(recall_model, "model")
-    assert hasattr(recall_model, "vector_linear")
+    assert hasattr(recall_model, "output_projection")
+
+
+@pytest.mark.parametrize(
+    ("batch_size", "seq_len", "hidden_size"),
+    [(4, 10, 128), (8, 20, 256), (16, 30, 512)],
+)
+def test_last_token_pool(
+    recall_model: RecallModel,
+    batch_size: int,
+    seq_len: int,
+    hidden_size: int,
+):
+    last_hidden_states = torch.randn(batch_size, seq_len, hidden_size)
+    attention_mask = torch.ones((batch_size, seq_len))
+    last_token_pool = recall_model.last_token_pool(last_hidden_states, attention_mask)
+    assert last_token_pool.shape == (batch_size, hidden_size)
+
+
+@pytest.mark.parametrize(
+    "pooling_method",
+    ["last", "cls", "mean"],
+)
+def test_pool_sentence_embedding(recall_model: RecallModel, pooling_method: str):
+    batch_size = 1
+    seq_len = 2
+    hidden_size = recall_model.model.config.hidden_size
+
+    hidden_state = torch.randn(batch_size, seq_len, hidden_size)
+    mask = torch.ones((batch_size, seq_len))
+
+    pooled_embedding = recall_model.pool_sentence_embedding(
+        pooling_method=pooling_method,
+        hidden_state=hidden_state,
+        mask=mask,
+    )
+    assert pooled_embedding.shape == (batch_size, hidden_size)
 
 
 @pytest.mark.parametrize(

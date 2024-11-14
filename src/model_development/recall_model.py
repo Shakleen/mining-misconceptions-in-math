@@ -11,6 +11,7 @@ from src.evaluation.map_calculator.map_calculator import MAPCalculator
 from src.model_development.loss_functions import info_nce_loss
 from src.constants.dll_paths import DLLPaths
 from src.configurations.recall_model_config import RecallModelConfig
+from src.model_development.latent_attention_module import LatentAttentionLayer
 
 
 class RecallModel(pl.LightningModule):
@@ -61,13 +62,33 @@ class RecallModel(pl.LightningModule):
             ),
         )
 
-        self.vector_linear = torch.nn.Linear(
+        if config.sentence_pooling_method == "attention":
+            self.latent_attention_layer = LatentAttentionLayer(
+                input_dim=self.model.config.vocab_size,
+                hidden_dim=config.hidden_dim,
+                num_latents=config.num_latents,
+                num_heads=config.num_heads,
+                mlp_dim=config.mlp_dim,
+            )
+
+        self.output_projection = torch.nn.Linear(
             self.model.config.vocab_size, config.output_dim
         )
 
     def last_token_pool(
-        self, last_hidden_states: Tensor, attention_mask: Tensor
+        self,
+        last_hidden_states: Tensor,
+        attention_mask: Tensor,
     ) -> Tensor:
+        """Pool the last token of the sequence.
+
+        Args:
+            last_hidden_states (Tensor): Last hidden states of the model. Shape: (batch_size, seq_length, hidden_size).
+            attention_mask (Tensor): Attention mask. Shape: (batch_size, seq_length).
+
+        Returns:
+            Tensor: Pooled embeddings. Shape: (batch_size, hidden_size).
+        """
         left_padding = attention_mask[:, -1].sum() == attention_mask.shape[0]
 
         if left_padding:
@@ -80,47 +101,71 @@ class RecallModel(pl.LightningModule):
                 sequence_lengths,
             ]
 
-    def pool_sentence_embedding(self, sentence_pooling_method, hidden_state, mask):
-        if sentence_pooling_method == "mean":
+    def pool_sentence_embedding(
+        self,
+        pooling_method: str,
+        hidden_state: Tensor,
+        mask: Tensor,
+    ) -> Tensor:
+        """Pool the sentence embedding based on the sentence pooling method.
+
+        Args:
+            pooling_method (str): Sentence pooling method.
+            hidden_state (Tensor): Hidden states of the model. Shape: (batch_size, seq_length, hidden_size).
+            mask (Tensor): Attention mask. Shape: (batch_size, seq_length).
+
+        Returns:
+            Tensor: Pooled embeddings. Shape: (batch_size, hidden_size).
+        """
+        if pooling_method == "mean":
             s = torch.sum(hidden_state * mask.unsqueeze(-1).float(), dim=1)
             d = mask.sum(axis=1, keepdim=True).float()
             return s / d
-        elif sentence_pooling_method == "cls":
+        elif pooling_method == "cls":
             return hidden_state[:, 0]
-        elif sentence_pooling_method == "last":
+        elif pooling_method == "last":
             return self.last_token_pool(hidden_state, mask)
-        elif sentence_pooling_method == "attention":
-            raise NotImplementedError("Attention pooling is not implemented yet.")
+        elif pooling_method == "attention":
+            return self.latent_attention_layer(hidden_state)
 
-    def get_features(self, input_ids: torch.Tensor, attention_mask: torch.Tensor):
+    def get_features(self, input_ids: Tensor, attention_mask: Tensor) -> Tensor:
+        """Get the features from the model.
+
+        Args:
+            input_ids (Tensor): Input IDs. Shape: (batch_size, seq_length).
+            attention_mask (Tensor): Attention mask. Shape: (batch_size, seq_length).
+
+        Returns:
+            Tensor: Features. Shape: (batch_size, hidden_size).
+        """
         last_hidden_state = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
         )[0]
         features = self.pool_sentence_embedding(
-            self.config.sentence_pooling_method,
-            last_hidden_state,
-            attention_mask,
+            pooling_method=self.config.sentence_pooling_method,
+            hidden_state=last_hidden_state,
+            mask=attention_mask,
         )
-        return F.normalize(self.vector_linear(features), p=2, dim=1)
+        return F.normalize(self.output_projection(features), p=2, dim=1)
 
     def forward(
         self,
-        question_ids: torch.Tensor,
-        question_mask: torch.Tensor,
-        misconception_ids: torch.Tensor,
-        misconception_mask: torch.Tensor,
+        question_ids: Tensor,
+        question_mask: Tensor,
+        misconception_ids: Tensor,
+        misconception_mask: Tensor,
     ):
         """Forward pass for the recall model.
 
         Args:
-            question_ids (torch.Tensor): Question IDs. Shape: (batch_size, question_seq_len).
-            question_mask (torch.Tensor): Question mask. Shape: (batch_size, question_seq_len).
-            misconception_ids (torch.Tensor): Misconception IDs. Shape: (batch_size, num_of_misconceptions, misconception_seq_len).
-            misconception_mask (torch.Tensor): Misconception mask. Shape: (batch_size, num_of_misconceptions, misconception_seq_len).
+            question_ids (Tensor): Question IDs. Shape: (batch_size, question_seq_len).
+            question_mask (Tensor): Question mask. Shape: (batch_size, question_seq_len).
+            misconception_ids (Tensor): Misconception IDs. Shape: (batch_size, num_of_misconceptions, misconception_seq_len).
+            misconception_mask (Tensor): Misconception mask. Shape: (batch_size, num_of_misconceptions, misconception_seq_len).
 
         Returns:
-            torch.Tensor: Similarities between the question and misconceptions. Shape: (batch_size, num_of_misconceptions).
+            Tensor: Similarities between the question and misconceptions. Shape: (batch_size, num_of_misconceptions).
         """
         # Reshape misconception inputs to encode all at once
         batch_size, num_misconceptions, seq_length = misconception_ids.shape
