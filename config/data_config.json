@@ -1,0 +1,22 @@
+{
+    "contrastive_data_name": {
+        "value": "contrastive-dataset.csv",
+        "description": "Name of contrastive data artifact stored in W&B."
+    },
+    "contrastive_data_version": {
+        "value": "latest",
+        "description": "Version of contrastive data artifact stored in W&B."
+    },
+    "num_folds": {
+        "value": 5,
+        "description": "Number of folds to use for cross-validation. Default is 5."
+    },
+    "batch_size": {
+        "value": 16,
+        "description": "Batch size for training. Default is 16."
+    },
+    "num_workers": {
+        "value": 4,
+        "description": "Number of workers to use for data loading. Default is 4."
+    }
+}
