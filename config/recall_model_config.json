@@ -1,0 +1,50 @@
+{
+    "model_path": {
+        "value": ".cache/Mistral-7B-v0.1",
+        "description": "Path to the model to use for training."
+    },
+    "lora_r": {
+        "value": 8,
+        "description": "The rank of the LoRA matrices. Default is 8."
+    },
+    "lora_alpha": {
+        "value": 32,
+        "description": "The scaling factor for the LoRA matrices. Default is 32."
+    },
+    "lora_dropout": {
+        "value": 0.05,
+        "description": "The dropout rate for the LoRA matrices. Default is 0.05."
+    },
+    "learning_rate": {
+        "value": 1e-4,
+        "description": "The learning rate for the model. Default is 1e-4."
+    },
+    "gradient_checkpointing": {
+        "value": true,
+        "description": "Whether to use gradient checkpointing. Default is true."
+    },
+    "hidden_dim": {
+        "value": 512,
+        "description": "The hidden dimension of the model. Default is 512."
+    },
+    "num_latents": {
+        "value": 512,
+        "description": "The number of latents to use for the model. Default is 512."
+    },
+    "num_heads": {
+        "value": 8,
+        "description": "The number of attention heads to use for the model. Default is 8."
+    },
+    "mlp_dim": {
+        "value": 1024,
+        "description": "The dimension of the MLP in the model. Default is 1024."
+    },
+    "output_dim": {
+        "value": 1024,
+        "description": "The output dimension of the model. Default is 1024."
+    },
+    "sentence_pooling_method": {
+        "value": "cls",
+        "description": "The method to use for sentence pooling. Default is 'cls'. Can be 'mean', 'cls', 'last', or 'attention'."
+    }
+}

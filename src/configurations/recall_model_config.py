@@ -1,11 +1,11 @@
-from typing import List
 from dataclasses import dataclass
+import json
 
 
 @dataclass
 class RecallModelConfig:
     model_path: str
-    fold: int
+    fold: int = 0
     lora_r: int = 8
     lora_alpha: int = 32
     lora_dropout: float = 0.05
@@ -17,6 +17,27 @@ class RecallModelConfig:
     mlp_dim: int = 1024
     output_dim: int = 1024
     sentence_pooling_method: str = "cls"
+
+    @classmethod
+    def from_json(cls, json_path: str) -> "RecallModelConfig":
+        """
+        Create a RecallModelConfig instance from a JSON file.
+
+        Args:
+            json_path: Path to the JSON configuration file
+            Each parameter in the JSON should have 'value' and 'description' keys.
+            Only 'value' will be used for configuration.
+
+        Returns:
+            RecallModelConfig instance
+        """
+        with open(json_path, "r") as f:
+            raw_config = json.load(f)
+
+        # Extract only the 'value' from each parameter
+        config_dict = {key: data["value"] for key, data in raw_config.items()}
+
+        return cls(**config_dict)
 
     def __post_init__(self):
         allowed_sentence_pooling_methods = {"mean", "cls", "last", "attention"}
