@@ -1,0 +1,22 @@
+{
+    "output_dir": {
+        "value": "output_dir",
+        "description": "Directory to store the output model."
+    },
+    "checkpoint_dir": {
+        "value": "checkpoints",
+        "description": "Directory to store the checkpoint model."
+    },
+    "num_epochs": {
+        "value": 5,
+        "description": "Number of epochs to train the model. Default is 5."
+    },
+    "patience": {
+        "value": 2,
+        "description": "Number of epochs to wait before early stopping. Default is 2."
+    },
+    "logging_steps": {
+        "value": 20,
+        "description": "Number of steps to log the training metrics. Default is 20."
+    }
+}
