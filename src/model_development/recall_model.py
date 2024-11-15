@@ -2,7 +2,7 @@ import torch
 from torch import Tensor
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import prepare_model_for_kbit_training
 from peft import LoraConfig, get_peft_model
 
@@ -19,48 +19,57 @@ class RecallModel(pl.LightningModule):
     def TorchColNames(self):
         return ContrastiveTorchDatasetColumns
 
-    def __init__(self, config: RecallModelConfig):
+    def __init__(self, config: RecallModelConfig, tokenizer: AutoTokenizer = None):
         super().__init__()
         self.config = config
 
         self.map_calculator = MAPCalculator(DLLPaths.MAP_CALCULATOR)
 
-        self.model = AutoModelForCausalLM.from_pretrained(
-            config.model_path,
-            quantization_config=BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_compute_dtype=torch.bfloat16,
-            ),
-            device_map="auto",
-            trust_remote_code=True,
-        )
+        if config.use_lora:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                config.model_path,
+                quantization_config=BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_quant_type="nf4",
+                    bnb_4bit_use_double_quant=True,
+                    bnb_4bit_compute_dtype=torch.bfloat16,
+                ),
+                device_map="auto",
+                trust_remote_code=True,
+            )
+            self.model = prepare_model_for_kbit_training(self.model)
+
+            self.model = get_peft_model(
+                self.model,
+                LoraConfig(
+                    r=config.lora_r,
+                    lora_alpha=config.lora_alpha,
+                    target_modules=[
+                        "q_proj",
+                        "v_proj",
+                        "k_proj",
+                        "o_proj",
+                        "gate_proj",
+                        "up_proj",
+                        "down_proj",
+                    ],
+                    lora_dropout=config.lora_dropout,
+                    bias="none",
+                    task_type="CAUSAL_LM",
+                ),
+            )
+        else:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                config.model_path,
+                device_map="auto",
+                trust_remote_code=True,
+            )
+
+        if tokenizer is not None:
+            self.model.resize_token_embeddings(len(tokenizer))
 
         if config.gradient_checkpointing:
             self.model.gradient_checkpointing_enable()
-
-        self.model = prepare_model_for_kbit_training(self.model)
-
-        self.model = get_peft_model(
-            self.model,
-            LoraConfig(
-                r=config.lora_r,
-                lora_alpha=config.lora_alpha,
-                target_modules=[
-                    "q_proj",
-                    "v_proj",
-                    "k_proj",
-                    "o_proj",
-                    "gate_proj",
-                    "up_proj",
-                    "down_proj",
-                ],
-                lora_dropout=config.lora_dropout,
-                bias="none",
-                task_type="CAUSAL_LM",
-            ),
-        )
 
         if config.sentence_pooling_method == "attention":
             self.latent_attention_layer = LatentAttentionLayer(
@@ -70,10 +79,6 @@ class RecallModel(pl.LightningModule):
                 num_heads=config.num_heads,
                 mlp_dim=config.mlp_dim,
             )
-
-        self.output_projection = torch.nn.Linear(
-            self.model.config.vocab_size, config.output_dim
-        )
 
     def last_token_pool(
         self,
@@ -147,7 +152,7 @@ class RecallModel(pl.LightningModule):
             hidden_state=last_hidden_state,
             mask=attention_mask,
         )
-        return F.normalize(self.output_projection(features), p=2, dim=1)
+        return F.normalize(features, p=2, dim=1)
 
     def forward(
         self,
@@ -227,9 +232,10 @@ class RecallModel(pl.LightningModule):
         accuracy = (predictions == batch[self.TorchColNames.LABEL]).float().mean()
 
         # Calculate MAP
+        rankings = torch.argsort(similarities, dim=-1, descending=True)
         map = self.map_calculator.calculate_batch_map(
             actual_indices=batch[self.TorchColNames.LABEL].detach().cpu().numpy(),
-            rankings_batch=predictions.detach().cpu().numpy(),
+            rankings_batch=rankings.detach().cpu().numpy(),
         )
 
         # Log metrics
@@ -253,9 +259,10 @@ class RecallModel(pl.LightningModule):
         accuracy = (predictions == batch[self.TorchColNames.LABEL]).float().mean()
 
         # Calculate MAP
+        rankings = torch.argsort(similarities, dim=-1, descending=True)
         map = self.map_calculator.calculate_batch_map(
             actual_indices=batch[self.TorchColNames.LABEL].detach().cpu().numpy(),
-            rankings_batch=predictions.detach().cpu().numpy(),
+            rankings_batch=rankings.detach().cpu().numpy(),
         )
 
         self._log_metrics(loss, accuracy, map, "val")

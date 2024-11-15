@@ -6,6 +6,7 @@ import json
 class RecallModelConfig:
     model_path: str
     fold: int = 0
+    use_lora: bool = True
     lora_r: int = 8
     lora_alpha: int = 32
     lora_dropout: float = 0.05

@@ -21,7 +21,6 @@ def test_init(recall_model: RecallModel):
 
 def test_module_attributes(recall_model: RecallModel):
     assert hasattr(recall_model, "model")
-    assert hasattr(recall_model, "output_projection")
 
 
 @pytest.mark.parametrize(
@@ -64,13 +63,11 @@ def test_pool_sentence_embedding(recall_model: RecallModel, pooling_method: str)
     ("batch_size", "seq_len"),
     [(4, 10), (8, 20), (16, 30)],
 )
-def test_get_features(
-    config: RecallModelConfig, recall_model: RecallModel, batch_size: int, seq_len: int
-):
+def test_get_features(recall_model: RecallModel, batch_size: int, seq_len: int):
     input_ids = torch.randint(0, 10000, (batch_size, seq_len))
     attention_mask = torch.ones((batch_size, seq_len))
     features = recall_model.get_features(input_ids, attention_mask)
-    assert features.shape == (batch_size, config.output_dim)
+    assert features.shape == (batch_size, recall_model.model.config.vocab_size)
 
 
 @pytest.mark.parametrize(

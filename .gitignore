@@ -165,3 +165,4 @@ cython_debug/
 **/artifacts
 **/wandb
 **/output_dir
+**/lightning_logs
