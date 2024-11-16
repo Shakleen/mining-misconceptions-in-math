@@ -6,3 +6,4 @@ class WandbProject:
     TEST_DATASET_NAME = "test-dataset"
     MISCONCEPTIONS_DATASET_NAME = "misconceptions-dataset"
     CONTRASTIVE_DATASET_NAME = "contrastive-dataset"
+    QA_PAIR_DATASET_NAME = "qa-pair-dataset"

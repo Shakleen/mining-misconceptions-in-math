@@ -68,3 +68,17 @@ class EvaluationCSVColumns:
     ACTUAL_INDEX = "ActualIndex"
     RANKINGS = "Rankings"
     MAP = "MAP"
+
+
+class QAPairCSVColumns:
+    """Column names for the QA pair dataset."""
+
+    QUESTION_ID = TrainCSVColumns.QUESTION_ID
+    QUESTION_TEXT = TrainCSVColumns.QUESTION_TEXT
+    SUBJECT_ID = TrainCSVColumns.SUBJECT_ID
+    SUBJECT_NAME = TrainCSVColumns.SUBJECT_NAME
+    CONSTRUCT_ID = TrainCSVColumns.CONSTRUCT_ID
+    CONSTRUCT_NAME = TrainCSVColumns.CONSTRUCT_NAME
+    ANSWER_TEXT = "AnswerText"
+    MISCONCEPTION_ID = MisconceptionsCSVColumns.MISCONCEPTION_ID
+    MISCONCEPTION_NAME = MisconceptionsCSVColumns.MISCONCEPTION_NAME
