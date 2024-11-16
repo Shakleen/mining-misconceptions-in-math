@@ -14,10 +14,7 @@ class RandomNegativeSampler(AbstractNegativeSampler):
         self.total_misconceptions = total_misconceptions
 
     def sample(self, actual_misconception_id: int) -> List[int]:
-        output = random.sample(
-            range(self.total_misconceptions),
-            self.sample_size - 1,
-        )
-        output.append(actual_misconception_id)
-        random.shuffle(output)
-        return output
+        output = set([actual_misconception_id])
+        while len(output) < self.sample_size:
+            output.add(random.randint(0, self.total_misconceptions - 1))
+        return list(output)
