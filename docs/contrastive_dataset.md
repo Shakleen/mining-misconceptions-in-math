@@ -11,3 +11,11 @@ Contrastive dataset is used for training recommender system models. A contrastiv
 * **Description**: Negative samples are randomly sampled.
 * **Weights and Biases artifact**: contrastive-dataset:v0
 * **Class**: [BaseDataset](../src/data_preparation/datasets/base_dataset.py)
+
+## Version 2
+* **Commit ID** : b2e143727cb0e010d731cd69fb98bd50318ae998
+* **Description**: Changes from version 1:
+    * Added sampler argument. Sampler is responsible for sampling negative samples. Sampler encapsulates the logic of sampling negative samples. 
+    * The number of negative samples is dynamic. And it is determined on the fly by the sampler.
+* **Weights and Biases artifact**: Uses qa-pair-dataset:v0
+* **Class**: [BaseDatasetV2](../src/data_preparation/datasets/base_dataset_v2.py) and [RandomNegativeSampler](../src/data_preparation/negative_sampler/random_sampler.py)
