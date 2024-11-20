@@ -9,7 +9,10 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from transformers import AutoTokenizer
 import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold
+import wandb
+import wandb.util
 
+from src.constants.wandb_project import WandbProject
 from src.configurations.recall_model_config import RecallModelConfig
 from src.configurations.data_config import DataConfig
 from src.configurations.trainer_config import TrainerConfig
@@ -17,6 +20,7 @@ from src.constants.column_names import ContrastiveCSVColumns
 from src.utils.seed_everything import seed_everything
 from src.data_preparation.get_dataloader import get_dataloader
 from src.model_development.recall_model import RecallModel
+from src.utils.wandb_artifact import load_dataframe_artifact
 
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -73,10 +77,24 @@ def main(args: argparse.Namespace):
     data_config = DataConfig.from_json(args.data_config)
     trainer_config = TrainerConfig.from_json(args.trainer_config)
 
+    # wandb.init(
+    #     project=WandbProject.PROJECT_NAME,
+    #     job_type="train-recall-model",
+    #     config={
+    #         "model_config": model_config.to_dict(),
+    #         "data_config": data_config.to_dict(),
+    #         "trainer_config": trainer_config.to_dict(),
+    #     },
+    #     name=f"recall_model-{wandb.util.generate_id()}",
+    # )
+
     if args.debug:
-        df = pd.read_csv("data/contrastive-datasethu66w3xp.csv", nrows=40)
+        df = pd.read_csv("data/contrastive-datasethu66w3xp.csv")
     else:
-        df = None  # TODO: Replace with W&B artifact
+        df = load_dataframe_artifact(
+            data_config.contrastive_data_name,
+            data_config.contrastive_data_version,
+        )
 
     skf = StratifiedGroupKFold(
         n_splits=data_config.num_folds,
@@ -85,6 +103,7 @@ def main(args: argparse.Namespace):
     )
 
     tokenizer = AutoTokenizer.from_pretrained(model_config.model_path)
+    tokenizer.pad_token = tokenizer.eos_token
 
     if tokenizer.pad_token is None:
         tokenizer.add_special_tokens({"pad_token": "[PAD]"})
@@ -210,7 +229,11 @@ def train_model(
     gc.collect()
 
     best_model_path = checkpoint_callback.best_model_path
-    best_model = RecallModel.load_from_checkpoint(best_model_path)
+    best_model = RecallModel.load_from_checkpoint(
+        best_model_path,
+        config=model_config,
+        tokenizer=tokenizer,
+    )
     return best_model.eval()
 
 

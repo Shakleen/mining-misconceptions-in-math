@@ -1,7 +1,11 @@
 {
     "model_path": {
-        "value": ".cache/Mistral-7B-v0.1",
+        "value": "microsoft/deberta-v3-xsmall",
         "description": "Path to the model to use for training."
+    },
+    "use_lora": {
+        "value": false,
+        "description": "Whether to use LoRA for training. Default is false."
     },
     "lora_r": {
         "value": 8,

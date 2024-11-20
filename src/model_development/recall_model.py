@@ -2,7 +2,7 @@ import torch
 from torch import Tensor
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModel, AutoTokenizer, BitsAndBytesConfig
 from peft import prepare_model_for_kbit_training
 from peft import LoraConfig, get_peft_model
 
@@ -26,7 +26,7 @@ class RecallModel(pl.LightningModule):
         self.map_calculator = MAPCalculator(DLLPaths.MAP_CALCULATOR)
 
         if config.use_lora:
-            self.model = AutoModelForCausalLM.from_pretrained(
+            self.model = AutoModel.from_pretrained(
                 config.model_path,
                 quantization_config=BitsAndBytesConfig(
                     load_in_4bit=True,
@@ -34,7 +34,6 @@ class RecallModel(pl.LightningModule):
                     bnb_4bit_use_double_quant=True,
                     bnb_4bit_compute_dtype=torch.bfloat16,
                 ),
-                device_map="auto",
                 trust_remote_code=True,
             )
             self.model = prepare_model_for_kbit_training(self.model)
@@ -59,9 +58,8 @@ class RecallModel(pl.LightningModule):
                 ),
             )
         else:
-            self.model = AutoModelForCausalLM.from_pretrained(
+            self.model = AutoModel.from_pretrained(
                 config.model_path,
-                device_map="auto",
                 trust_remote_code=True,
             )
 
@@ -73,7 +71,7 @@ class RecallModel(pl.LightningModule):
 
         if config.sentence_pooling_method == "attention":
             self.latent_attention_layer = LatentAttentionLayer(
-                input_dim=self.model.config.vocab_size,
+                input_dim=self.model.config.hidden_size,
                 hidden_dim=config.hidden_dim,
                 num_latents=config.num_latents,
                 num_heads=config.num_heads,
@@ -143,6 +141,7 @@ class RecallModel(pl.LightningModule):
         Returns:
             Tensor: Features. Shape: (batch_size, hidden_size).
         """
+        # Shape: (batch_size, seq_length, hidden_size)
         last_hidden_state = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
