@@ -8,7 +8,7 @@
         "description": "Directory to store the checkpoint model."
     },
     "num_epochs": {
-        "value": 5,
+        "value": 10,
         "description": "Number of epochs to train the model. Default is 5."
     },
     "patience": {

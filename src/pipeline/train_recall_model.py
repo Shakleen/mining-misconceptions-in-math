@@ -27,7 +27,7 @@ from src.data_preparation.negative_sampler.random_sampler import RandomNegativeS
 
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
-# torch.set_float32_matmul_precision("medium")
+torch.set_float32_matmul_precision("medium")
 
 
 def parse_args():
@@ -278,6 +278,7 @@ def train_model(
     )
     trainer = pl.Trainer(
         accelerator="auto",
+        precision="bf16-mixed",
         max_epochs=trainer_config.num_epochs,
         log_every_n_steps=trainer_config.logging_steps,
         callbacks=[checkpoint_callback, early_stopping_callback],
@@ -291,7 +292,6 @@ def train_model(
     gc.collect()
 
     best_model_path = checkpoint_callback.best_model_path
-    # best_model_path = "lightning_logs/version_1/checkpoints/best-checkpoint-0.ckpt"
     best_model = RecallModel.load_from_checkpoint(
         best_model_path,
         config=model_config,

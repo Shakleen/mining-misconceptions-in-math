@@ -8,7 +8,7 @@
         "description": "Version of misconception data artifact stored in W&B."
     },
     "negative_sample_size": {
-        "value": 10,
+        "value": 100,
         "description": "Number of negative samples in each row. Defaults to 10"
     },
     "num_folds": {
@@ -16,7 +16,7 @@
         "description": "Number of folds to use for cross-validation. Default is 5."
     },
     "batch_size": {
-        "value": 16,
+        "value": 8,
         "description": "Batch size for training. Default is 16."
     },
     "num_workers": {
@@ -24,11 +24,11 @@
         "description": "Number of workers to use for data loading. Default is 4."
     },
     "question_max_length": {
-        "value": 512,
+        "value": 256,
         "description": "Maximum length of the question. Default is 512."
     },
     "misconception_max_length": {
-        "value": 64,
+        "value": 32,
         "description": "Maximum length of the misconception. Default is 64."
     }
 }
