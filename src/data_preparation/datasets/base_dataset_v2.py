@@ -68,9 +68,7 @@ class BaseDatasetV2(AbstractDataset):
         self.misconceptions_df = misconceptions_df
         self.negative_sampler = negative_sampler
         self.query = (
-            "Given subject, construct, question and incorrect answer, "
-            + "retrieve the list of misconceptions that are related to the incorrect answer."
-            + "\nSubject: {subject}"
+            "Subject: {subject}"
             + "\nConstruct: {construct}"
             + "\nQuestion: {question}"
             + "\nIncorrect Answer: {incorrect_answer}"
