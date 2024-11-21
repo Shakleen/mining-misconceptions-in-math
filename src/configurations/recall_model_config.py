@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import json
 
 
@@ -39,6 +39,9 @@ class RecallModelConfig:
         config_dict = {key: data["value"] for key, data in raw_config.items()}
 
         return cls(**config_dict)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 
     def __post_init__(self):
         allowed_sentence_pooling_methods = {"mean", "cls", "last", "attention"}

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import json
 
 @dataclass
@@ -10,7 +10,7 @@ class TrainerConfig:
     num_epochs: int
     patience: int
     logging_steps: int
-
+    val_check_interval: float
     @classmethod
     def from_json(cls, json_path: str) -> "TrainerConfig":
         with open(json_path, "r") as f:
@@ -19,3 +19,6 @@ class TrainerConfig:
         config_dict = {key: data["value"] for key, data in raw_config.items()}
 
         return cls(**config_dict)
+
+    def to_dict(self) -> dict:
+        return asdict(self)

@@ -7,6 +7,14 @@
         "value": "latest",
         "description": "Version of contrastive data artifact stored in W&B."
     },
+    "misconception_data_name": {
+        "value": "misconception-dataset.csv",
+        "description": "Name of misconception data artifact stored in W&B."
+    },
+    "misconception_data_version": {
+        "value": "latest",
+        "description": "Version of misconception data artifact stored in W&B."
+    },
     "num_folds": {
         "value": 5,
         "description": "Number of folds to use for cross-validation. Default is 5."

@@ -12,11 +12,15 @@
         "description": "Number of epochs to train the model. Default is 5."
     },
     "patience": {
-        "value": 2,
+        "value": 4,
         "description": "Number of epochs to wait before early stopping. Default is 2."
     },
     "logging_steps": {
         "value": 20,
         "description": "Number of steps to log the training metrics. Default is 20."
+    },
+    "val_check_interval": {
+        "value": 0.25,
+        "description": "Validation check interval. Default is 0.25."
     }
 }
