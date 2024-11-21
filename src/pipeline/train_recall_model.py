@@ -17,16 +17,17 @@ from src.constants.wandb_project import WandbProject
 from src.configurations.recall_model_config import RecallModelConfig
 from src.configurations.data_config import DataConfig
 from src.configurations.trainer_config import TrainerConfig
-from src.constants.column_names import ContrastiveCSVColumns
+from src.constants.column_names import QAPairCSVColumns
 from src.utils.seed_everything import seed_everything
-from src.data_preparation.get_dataloader import get_dataloader
 from src.model_development.recall_model import RecallModel
 from src.utils.wandb_artifact import load_dataframe_artifact
 from src.pipeline.inference_recall_model import inference
+from src.data_preparation.datasets.base_dataset_v2 import BaseDatasetV2
+from src.data_preparation.negative_sampler.random_sampler import RandomNegativeSampler
 
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
-torch.set_float32_matmul_precision("medium")
+# torch.set_float32_matmul_precision("medium")
 
 
 def parse_args():
@@ -93,18 +94,14 @@ def main(args: argparse.Namespace):
         name=f"recall_model-{wandb.util.generate_id()}",
     )
 
-    if args.debug:
-        df = pd.read_csv("data/contrastive-datasethu66w3xp.csv")
-        misconception_df = pd.read_csv("data/misconceptions-datasetas216_mx.csv")
-    else:
-        df = load_dataframe_artifact(
-            data_config.contrastive_data_name,
-            data_config.contrastive_data_version,
-        )
-        misconception_df = load_dataframe_artifact(
-            data_config.misconception_data_name,
-            data_config.misconception_data_version,
-        )
+    df = load_dataframe_artifact(
+        WandbProject.QA_PAIR_DATASET_NAME,
+        data_config.qa_pair_data_version,
+    )
+    misconception_df = load_dataframe_artifact(
+        WandbProject.MISCONCEPTIONS_DATASET_NAME,
+        data_config.misconception_data_version,
+    )
 
     skf = StratifiedGroupKFold(
         n_splits=data_config.num_folds,
@@ -121,13 +118,14 @@ def main(args: argparse.Namespace):
     for fold, (train_idx, val_idx) in enumerate(
         skf.split(
             df,
-            df[ContrastiveCSVColumns.LABEL],
-            df[ContrastiveCSVColumns.QUESTION_ID],
+            df[QAPairCSVColumns.MISCONCEPTION_ID],
+            groups=df[QAPairCSVColumns.QUESTION_ID],
         )
     ):
         train_loader, val_loader = get_data_loaders(
             data_config,
             df,
+            misconception_df,
             tokenizer,
             train_idx,
             val_idx,
@@ -159,7 +157,7 @@ def main(args: argparse.Namespace):
             rankings_batch=np.concatenate(preds),
         )
 
-        print(f"Fold {fold} MAP score: {map_score}")
+        wandb.log({f"map_score_{fold}": map_score})
 
         if args.debug:
             break
@@ -172,12 +170,13 @@ def main(args: argparse.Namespace):
         actual_indices=np.concatenate(all_labels),
         rankings_batch=np.concatenate(all_preds),
     )
-    print(f"Overall MAP score: {map_score}")
+    wandb.log({"overall_map_score": map_score})
 
 
 def get_data_loaders(
     data_config: DataConfig,
     df: pd.DataFrame,
+    misconception_df: pd.DataFrame,
     tokenizer: AutoTokenizer,
     train_idx: List[int],
     val_idx: List[int],
@@ -187,6 +186,7 @@ def get_data_loaders(
     Args:
         data_config (DataConfig): Data configuration.
         df (pd.DataFrame): DataFrame containing the dataset.
+        misconception_df (pd.DataFrame): DataFrame containing the misconceptions dataset.
         tokenizer (AutoTokenizer): Tokenizer for the dataset.
         train_idx (List[int]): Indices of the training data.
         val_idx (List[int]): Indices of the validation data.
@@ -197,21 +197,43 @@ def get_data_loaders(
     train_df = df.iloc[train_idx]
     val_df = df.iloc[val_idx]
 
-    train_loader = get_dataloader(
-        train_df,
-        tokenizer,
+    sampler = RandomNegativeSampler(
+        sample_size=data_config.negative_sample_size,
+        total_misconceptions=misconception_df.shape[0],
+    )
+
+    train_dataset = BaseDatasetV2(
+        dataframe=train_df,
+        misconceptions_df=misconception_df,
+        tokenizer=tokenizer,
+        negative_sampler=sampler,
+        include_meta_data=False,
+        question_max_length=data_config.question_max_length,
+        misconception_max_length=data_config.misconception_max_length,
+    )
+    val_dataset = BaseDatasetV2(
+        dataframe=val_df,
+        misconceptions_df=misconception_df,
+        tokenizer=tokenizer,
+        negative_sampler=sampler,
+        include_meta_data=False,
+        question_max_length=data_config.question_max_length,
+        misconception_max_length=data_config.misconception_max_length,
+    )
+
+    train_loader = DataLoader(
+        train_dataset,
         batch_size=data_config.batch_size,
         num_workers=data_config.num_workers,
         shuffle=True,
-        include_meta_data=False,
+        collate_fn=lambda x: train_dataset.collate_fn(x, False),
     )
-    val_loader = get_dataloader(
-        val_df,
-        tokenizer,
+    val_loader = DataLoader(
+        val_dataset,
         batch_size=data_config.batch_size,
         num_workers=data_config.num_workers,
         shuffle=False,
-        include_meta_data=True,
+        collate_fn=lambda x: val_dataset.collate_fn(x, False),
     )
 
     return train_loader, val_loader

@@ -1,19 +1,15 @@
 {
-    "contrastive_data_name": {
-        "value": "contrastive-dataset.csv",
-        "description": "Name of contrastive data artifact stored in W&B."
-    },
-    "contrastive_data_version": {
+    "qa_pair_data_version": {
         "value": "latest",
-        "description": "Version of contrastive data artifact stored in W&B."
-    },
-    "misconception_data_name": {
-        "value": "misconception-dataset.csv",
-        "description": "Name of misconception data artifact stored in W&B."
+        "description": "Version of QA pair data artifact stored in W&B."
     },
     "misconception_data_version": {
         "value": "latest",
         "description": "Version of misconception data artifact stored in W&B."
+    },
+    "negative_sample_size": {
+        "value": 10,
+        "description": "Number of negative samples in each row. Defaults to 10"
     },
     "num_folds": {
         "value": 5,
@@ -26,5 +22,13 @@
     "num_workers": {
         "value": 4,
         "description": "Number of workers to use for data loading. Default is 4."
+    },
+    "question_max_length": {
+        "value": 512,
+        "description": "Maximum length of the question. Default is 512."
+    },
+    "misconception_max_length": {
+        "value": 64,
+        "description": "Maximum length of the misconception. Default is 64."
     }
 }

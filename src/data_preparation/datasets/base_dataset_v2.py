@@ -68,7 +68,9 @@ class BaseDatasetV2(AbstractDataset):
         self.misconceptions_df = misconceptions_df
         self.negative_sampler = negative_sampler
         self.query = (
-            "Subject: {subject}"
+            "Given subject, construct, question and incorrect answer, "
+            + "retrieve the list of misconceptions that are related to the incorrect answer."
+            + "\nSubject: {subject}"
             + "\nConstruct: {construct}"
             + "\nQuestion: {question}"
             + "\nIncorrect Answer: {incorrect_answer}"
@@ -87,7 +89,7 @@ class BaseDatasetV2(AbstractDataset):
 
         query_encoding = self._get_query_encoding(row)
 
-        misconception_id = row[self.CSVColName.MISCONCEPTION_ID]
+        misconception_id = int(row[self.CSVColName.MISCONCEPTION_ID])
 
         negative_sample_id_list = self.negative_sampler.sample(misconception_id)
         label = negative_sample_id_list.index(misconception_id)
@@ -153,12 +155,14 @@ class BaseDatasetV2(AbstractDataset):
         self,
         negative_sample_id_list: List[int],
     ) -> List[Dict[str, torch.Tensor]]:
-        negative_sample_text_list = self.misconceptions_df.loc[
-            self.misconceptions_df[MisconceptionsCSVColumns.MISCONCEPTION_ID].isin(
-                negative_sample_id_list
-            ),
-            MisconceptionsCSVColumns.MISCONCEPTION_NAME,
-        ].tolist()
+        negative_sample_text_list = [
+            self.misconceptions_df.loc[
+                self.misconceptions_df[MisconceptionsCSVColumns.MISCONCEPTION_ID]
+                == m_id,
+                MisconceptionsCSVColumns.MISCONCEPTION_NAME,
+            ].values[0]
+            for m_id in negative_sample_id_list
+        ]
         misconception_encodings = [
             self.tokenizer(
                 misc,

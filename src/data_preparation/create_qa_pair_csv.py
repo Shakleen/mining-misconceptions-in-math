@@ -30,7 +30,6 @@ def parse_args():
         usage="""
         python src/data_preparation/create_qa_pair_csv.py
         --train-dataset-version <version>
-        --misconceptions-dataset-version <version>
         """,
     )
     parser.add_argument(
@@ -40,49 +39,31 @@ def parse_args():
         default="latest",
         help="Version of the train dataset to use. Default is latest.",
     )
-    parser.add_argument(
-        "--misconceptions-dataset-version",
-        type=str,
-        required=False,
-        default="latest",
-        help="Version of the misconceptions dataset to use. Default is latest.",
-    )
     return parser.parse_args()
 
 
-def create_new_row(
-    row: pd.Series,
-    option: str,
-    misconception_df: pd.DataFrame,
-) -> pd.DataFrame:
+def create_new_row(row: pd.Series, option: str) -> pd.DataFrame:
     """Create a new row for the QA pair dataset.
 
     Args:
         row (pd.Series): Row of the train dataset.
         option (str): Option of the answer.
-        misconception_df (pd.DataFrame): Dataframe of the misconceptions dataset.
 
     Returns:
         pd.DataFrame: New row for the QA pair dataset.
     """
     new_row = {
-        QAPairCSVColumns.QUESTION_ID: [row[TrainCSVColumns.QUESTION_ID]],
-        QAPairCSVColumns.QUESTION_TEXT: [row[TrainCSVColumns.QUESTION_TEXT]],
-        QAPairCSVColumns.SUBJECT_ID: [row[TrainCSVColumns.SUBJECT_ID]],
-        QAPairCSVColumns.SUBJECT_NAME: [row[TrainCSVColumns.SUBJECT_NAME]],
-        QAPairCSVColumns.CONSTRUCT_ID: [row[TrainCSVColumns.CONSTRUCT_ID]],
-        QAPairCSVColumns.CONSTRUCT_NAME: [row[TrainCSVColumns.CONSTRUCT_NAME]],
+        QAPairCSVColumns.QUESTION_ID: [int(row[TrainCSVColumns.QUESTION_ID])],
+        QAPairCSVColumns.QUESTION_TEXT: [row[TrainCSVColumns.QUESTION_TEXT].strip()],
+        QAPairCSVColumns.SUBJECT_ID: [int(row[TrainCSVColumns.SUBJECT_ID])],
+        QAPairCSVColumns.SUBJECT_NAME: [row[TrainCSVColumns.SUBJECT_NAME].strip()],
+        QAPairCSVColumns.CONSTRUCT_ID: [int(row[TrainCSVColumns.CONSTRUCT_ID])],
+        QAPairCSVColumns.CONSTRUCT_NAME: [row[TrainCSVColumns.CONSTRUCT_NAME].strip()],
         QAPairCSVColumns.ANSWER_TEXT: [
-            row[TrainCSVColumns.ANSWER_FORMAT.format(option=option)]
+            row[TrainCSVColumns.ANSWER_FORMAT.format(option=option)].strip()
         ],
         QAPairCSVColumns.MISCONCEPTION_ID: [
-            row[TrainCSVColumns.MISCONCEPTION_FORMAT.format(option=option)]
-        ],
-        QAPairCSVColumns.MISCONCEPTION_NAME: [
-            misconception_df.loc[
-                row[TrainCSVColumns.MISCONCEPTION_FORMAT.format(option=option)],
-                MisconceptionsCSVColumns.MISCONCEPTION_NAME,
-            ]
+            int(row[TrainCSVColumns.MISCONCEPTION_FORMAT.format(option=option)])
         ],
     }
 
@@ -101,10 +82,6 @@ def main(args: argparse.Namespace):
         WandbProject.TRAIN_DATASET_NAME,
         args.train_dataset_version,
     )
-    misconception_df = load_dataframe_artifact(
-        WandbProject.MISCONCEPTIONS_DATASET_NAME,
-        args.misconceptions_dataset_version,
-    )
 
     qa_df = pd.DataFrame()
 
@@ -119,7 +96,7 @@ def main(args: argparse.Namespace):
             ):
                 continue
 
-            qa_df = pd.concat([qa_df, create_new_row(row, option, misconception_df)])
+            qa_df = pd.concat([qa_df, create_new_row(row, option)])
 
     log_dataframe_artifact(
         qa_df,
@@ -137,7 +114,6 @@ def main(args: argparse.Namespace):
         - `ConstructName`: Name of the construct.
         - `AnswerText`: Text of the answer.
         - `MisconceptionId`: Id of the misconception.
-        - `MisconceptionName`: Name of the misconception.
         """,
     )
 

@@ -5,13 +5,14 @@ import json
 @dataclass
 class DataConfig:
     """Configuration for the data used in the training pipeline."""
-    contrastive_data_name: str
-    contrastive_data_version: str
-    misconception_data_name: str
+    qa_pair_data_version: str
     misconception_data_version: str
     num_folds: int
     batch_size: int
     num_workers: int
+    negative_sample_size: int
+    question_max_length: int
+    misconception_max_length: int
 
     @classmethod
     def from_json(cls, json_path: str) -> "DataConfig":
