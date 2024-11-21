@@ -26,6 +26,7 @@ from src.pipeline.inference_recall_model import inference
 
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
+torch.set_float32_matmul_precision("medium")
 
 
 def parse_args():
@@ -60,8 +61,8 @@ def parse_args():
     parser.add_argument(
         "--debug",
         type=bool,
-        default=True,
-        help="Whether to run in debug mode.",
+        default=False,
+        help="Whether to run in debug mode. Defaults to False.",
     )
     parser.add_argument(
         "--seed",
@@ -86,6 +87,8 @@ def main(args: argparse.Namespace):
             "model_config": model_config.to_dict(),
             "data_config": data_config.to_dict(),
             "trainer_config": trainer_config.to_dict(),
+            "debug": args.debug,
+            "seed": args.seed,
         },
         name=f"recall_model-{wandb.util.generate_id()}",
     )
