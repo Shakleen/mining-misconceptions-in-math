@@ -8,7 +8,7 @@
 // Structure to hold similarity scores and indices
 typedef struct
 {
-    float similarity;
+    double similarity;
     int index;
 } SimilarityPair;
 
@@ -34,9 +34,9 @@ int compare_pairs(const void *a, const void *b)
  * @param arr2: Second vector.
  * @return Cosine similarity between the two vectors.
  */
-float cosine_similarity(const float arr1[], const float arr2[], int vector_dim)
+double cosine_similarity(const double arr1[], const double arr2[], int vector_dim)
 {
-    float dot_product = 0.0f, norm1 = 0.0f, norm2 = 0.0f;
+    double dot_product = 0.0, norm1 = 0.0, norm2 = 0.0;
 
     // Calculate dot product and norms in a single pass
     for (int i = 0; i < vector_dim; i++)
@@ -53,7 +53,7 @@ float cosine_similarity(const float arr1[], const float arr2[], int vector_dim)
     // Avoid division by zero
     if (norm1 < EPSILON || norm2 < EPSILON)
     {
-        return 0.0f;
+        return 0.0;
     }
 
     // Calculate cosine similarity
@@ -61,8 +61,8 @@ float cosine_similarity(const float arr1[], const float arr2[], int vector_dim)
 }
 
 // Function to find top K similar vectors
-void find_top_similar(const float *query,
-                      const float *database,
+void find_top_similar(const double *query,
+                      const double *database,
                       int vector_dim,
                       int num_vectors,
                       int *top_indices,
@@ -116,8 +116,8 @@ void find_top_similar(const float *query,
  * @param top_indices: Output array for top K indices [num_queries × TOP_K]
  * @param num_threads: Number of threads to use (0 for default)
  */
-void find_top_similar_batch(const float *queries,
-                            const float *database,
+void find_top_similar_batch(const double *queries,
+                            const double *database,
                             int vector_dim,
                             int num_vectors,
                             int num_queries,
@@ -143,7 +143,7 @@ void find_top_similar_batch(const float *queries,
         }
 
         // Get pointer to current query vector
-        const float *query = queries + (q * vector_dim);
+        const double *query = queries + (q * vector_dim);
 
 // Calculate similarities for all database vectors
 #pragma omp parallel for schedule(dynamic, 64)
