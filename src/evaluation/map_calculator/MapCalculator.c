@@ -7,24 +7,15 @@
 
 double calculate_map(int actual_index, const int *rankings, int rankings_size)
 {
-    double precision_sum = 0.0;
-    int num_relevant = 0;
-
     for (int i = 0; i < rankings_size; ++i)
     {
         if (rankings[i] == actual_index)
         {
-            num_relevant++;
-            precision_sum += (double)num_relevant / (i + 1);
+            return 1.0 / (i + 1);
         }
     }
 
-    if (num_relevant == 0)
-    {
-        return 0.0;
-    }
-
-    return precision_sum / num_relevant;
+    return 0.0;
 }
 
 double calculate_batch_map(const int *actual_indices,
