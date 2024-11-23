@@ -71,6 +71,12 @@ def parse_args():
         default=42,
         help="Random seed. Defaults to 42.",
     )
+    parser.add_argument(
+        "--train_with_all",
+        type=bool,
+        default=False,
+        help="Whether to train with all the data. Defaults to False.",
+    )
     return parser.parse_args()
 
 
@@ -150,8 +156,9 @@ def main(args: argparse.Namespace):
             val_loader,
         )
 
-        # np.save(f"output_dir/preds_{fold}.npy", preds)
-        # np.save(f"output_dir/labels_{fold}.npy", labels)
+        if args.debug:
+            np.save(f"output_dir/preds_{fold}.npy", preds)
+            np.save(f"output_dir/labels_{fold}.npy", labels)
 
         all_preds.append(preds)
         all_labels.append(labels)
@@ -170,14 +177,72 @@ def main(args: argparse.Namespace):
         torch.cuda.empty_cache()
         gc.collect()
 
-    # np.save("output_dir/all_preds.npy", np.concatenate(all_preds))
-    # np.save("output_dir/all_labels.npy", np.concatenate(all_labels))
+    if args.debug:
+        np.save("output_dir/all_preds.npy", np.concatenate(all_preds))
+        np.save("output_dir/all_labels.npy", np.concatenate(all_labels))
 
     map_score = best_model.map_calculator.calculate_batch_map(
         actual_indices=np.concatenate(all_labels),
         rankings_batch=np.concatenate(all_preds),
     )
     wandb.log({"overall_map_score": map_score})
+    wandb.finish()
+
+    del best_model
+    torch.cuda.empty_cache()
+    gc.collect()
+
+    if args.train_with_all:
+        train_with_all_data(
+            model_config,
+            data_config,
+            trainer_config,
+            df,
+            misconception_df,
+            tokenizer,
+        )
+
+
+def train_with_all_data(
+    model_config: RecallModelConfig,
+    data_config: DataConfig,
+    trainer_config: TrainerConfig,
+    df: pd.DataFrame,
+    misconception_df: pd.DataFrame,
+    tokenizer: AutoTokenizer,
+):
+    sampler = RandomNegativeSampler(
+        sample_size=data_config.negative_sample_size,
+        total_misconceptions=misconception_df.shape[0],
+    )
+
+    train_dataset = BaseDatasetV2(
+        dataframe=df,
+        misconceptions_df=misconception_df,
+        tokenizer=tokenizer,
+        negative_sampler=sampler,
+        include_meta_data=False,
+        question_max_length=data_config.question_max_length,
+        misconception_max_length=data_config.misconception_max_length,
+    )
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=data_config.batch_size,
+        num_workers=data_config.num_workers,
+        shuffle=True,
+        collate_fn=lambda x: train_dataset.collate_fn(x, False),
+    )
+
+    model = RecallModel(model_config, tokenizer)
+    trainer = pl.Trainer(
+        accelerator="auto",
+        precision="bf16-mixed",
+        max_epochs=trainer_config.num_epochs,
+        log_every_n_steps=trainer_config.logging_steps,
+    )
+    trainer.fit(model, train_loader)
+    trainer.save_checkpoint(f"output_dir/model.ckpt")
 
 
 def get_data_loaders(
@@ -299,7 +364,6 @@ def train_model(
     gc.collect()
 
     best_model_path = checkpoint_callback.best_model_path
-    # best_model_path = f"output_dir/Kaggle_EEDI/klyiwii4/checkpoints/best-checkpoint-{fold}.ckpt"
     best_model = RecallModel.load_from_checkpoint(
         best_model_path,
         config=model_config,
