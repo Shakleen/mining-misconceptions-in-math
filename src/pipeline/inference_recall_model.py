@@ -4,6 +4,7 @@ from tqdm import tqdm
 import pandas as pd
 from transformers import AutoTokenizer
 from torch.utils.data import DataLoader
+import numpy as np
 
 from src.model_development.recall_model import RecallModel
 from src.data_preparation.datasets.misconception_dataset import MisconceptionDataset
@@ -46,8 +47,8 @@ def inference(
             misconception_dataloader, best_model
         )
 
-        all_labels = []
-        all_preds = []
+        all_labels = None
+        all_preds = None
 
         for batch in tqdm(
             val_loader,
@@ -72,10 +73,16 @@ def inference(
                 all_misconceptions_embeddings,
                 k=25,
             )
-            all_preds.append(top_k_misconceptions)
-            all_labels.append(
-                batch[ContrastiveTorchDatasetColumns.LABEL].detach().cpu().numpy()
-            )
+
+            if all_preds is None:
+                all_preds = top_k_misconceptions
+            else:
+                all_preds = np.concatenate([all_preds, top_k_misconceptions])
+
+            if all_labels is None:
+                all_labels = batch[ContrastiveTorchDatasetColumns.LABEL].detach().cpu().numpy()
+            else:
+                all_labels = np.concatenate([all_labels, batch[ContrastiveTorchDatasetColumns.LABEL].detach().cpu().numpy()])
 
     return all_preds, all_labels
 

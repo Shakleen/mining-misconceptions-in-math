@@ -11,7 +11,7 @@ from src.evaluation.map_calculator.map_calculator import MAPCalculator
 from src.model_development.loss_functions import info_nce_loss
 from src.constants.dll_paths import DLLPaths
 from src.configurations.recall_model_config import RecallModelConfig
-from src.model_development.latent_attention_module import LatentAttentionLayer
+from src.model_development.latent_attention.latent_multi_head_attention import LatentMultiHeadAttention
 
 
 class RecallModel(pl.LightningModule):
@@ -70,12 +70,12 @@ class RecallModel(pl.LightningModule):
             self.model.gradient_checkpointing_enable()
 
         if config.sentence_pooling_method == "attention":
-            self.latent_attention_layer = LatentAttentionLayer(
+            self.latent_attention_layer = LatentMultiHeadAttention(
                 input_dim=self.model.config.hidden_size,
                 hidden_dim=config.hidden_dim,
                 num_latents=config.num_latents,
                 num_heads=config.num_heads,
-                mlp_dim=config.mlp_dim,
+                mlp_ratio=config.mlp_ratio,
             )
 
     def last_token_pool(

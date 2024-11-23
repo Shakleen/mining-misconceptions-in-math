@@ -15,7 +15,7 @@ class RecallModelConfig:
     hidden_dim: int = 512
     num_latents: int = 512
     num_heads: int = 8
-    mlp_dim: int = 1024
+    mlp_ratio: int = 4
     output_dim: int = 1024
     sentence_pooling_method: str = "cls"
 

@@ -149,12 +149,16 @@ def main(args: argparse.Namespace):
             data_config.num_workers,
             val_loader,
         )
-        all_preds.extend(preds)
-        all_labels.extend(labels)
+
+        # np.save(f"output_dir/preds_{fold}.npy", preds)
+        # np.save(f"output_dir/labels_{fold}.npy", labels)
+
+        all_preds.append(preds)
+        all_labels.append(labels)
 
         map_score = best_model.map_calculator.calculate_batch_map(
-            actual_indices=np.concatenate(labels),
-            rankings_batch=np.concatenate(preds),
+            actual_indices=labels,
+            rankings_batch=preds,
         )
 
         wandb.log({f"map_score_{fold}": map_score})
@@ -162,9 +166,12 @@ def main(args: argparse.Namespace):
         if args.debug:
             break
 
-        del best_model, train_loader, val_loader
+        del train_loader, val_loader
         torch.cuda.empty_cache()
         gc.collect()
+
+    # np.save("output_dir/all_preds.npy", np.concatenate(all_preds))
+    # np.save("output_dir/all_labels.npy", np.concatenate(all_labels))
 
     map_score = best_model.map_calculator.calculate_batch_map(
         actual_indices=np.concatenate(all_labels),
@@ -292,6 +299,7 @@ def train_model(
     gc.collect()
 
     best_model_path = checkpoint_callback.best_model_path
+    # best_model_path = f"output_dir/Kaggle_EEDI/klyiwii4/checkpoints/best-checkpoint-{fold}.ckpt"
     best_model = RecallModel.load_from_checkpoint(
         best_model_path,
         config=model_config,
