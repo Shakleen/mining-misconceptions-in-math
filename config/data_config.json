@@ -30,5 +30,13 @@
     "misconception_max_length": {
         "value": 32,
         "description": "Maximum length of the misconception. Default is 64."
+    },
+    "hard_to_random_ratio": {
+        "value": 0.25,
+        "description": "Ratio of hard negatives to random negatives. Default is 0.25."
+    },
+    "misconception_embeddings_path": {
+        "value": "assets/misconception_embeddings.npy",
+        "description": "Path to the misconception embeddings file."
     }
 }

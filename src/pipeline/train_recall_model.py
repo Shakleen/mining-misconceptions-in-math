@@ -22,7 +22,9 @@ from src.utils.seed_everything import seed_everything
 from src.model_development.recall_model import RecallModel
 from src.utils.wandb_artifact import load_dataframe_artifact
 from src.data_preparation.datasets.base_dataset_v2 import BaseDatasetV2
-from src.data_preparation.negative_sampler.random_sampler import RandomNegativeSampler
+from src.data_preparation.negative_sampler.hard_negative_sampler import (
+    HardNegativeSampler,
+)
 from src.pipeline.inference_recall_model import create_misconception_dataloader
 
 
@@ -183,9 +185,11 @@ def train_with_all_data(
     misconception_df: pd.DataFrame,
     tokenizer: AutoTokenizer,
 ):
-    sampler = RandomNegativeSampler(
+    sampler = HardNegativeSampler(
         sample_size=data_config.negative_sample_size,
         total_misconceptions=misconception_df.shape[0],
+        misconception_embeddings=np.load(data_config.misconception_embeddings_path),
+        hard_to_random_ratio=data_config.hard_to_random_ratio,
     )
 
     train_dataset = BaseDatasetV2(
@@ -241,9 +245,11 @@ def get_data_loaders(
     train_df = df.iloc[train_idx]
     val_df = df.iloc[val_idx]
 
-    sampler = RandomNegativeSampler(
+    sampler = HardNegativeSampler(
         sample_size=data_config.negative_sample_size,
         total_misconceptions=misconception_df.shape[0],
+        misconception_embeddings=np.load(data_config.misconception_embeddings_path),
+        hard_to_random_ratio=data_config.hard_to_random_ratio,
     )
 
     train_dataset = BaseDatasetV2(

@@ -13,6 +13,8 @@ class DataConfig:
     negative_sample_size: int
     question_max_length: int
     misconception_max_length: int
+    hard_to_random_ratio: float
+    misconception_embeddings_path: str
 
     @classmethod
     def from_json(cls, json_path: str) -> "DataConfig":
