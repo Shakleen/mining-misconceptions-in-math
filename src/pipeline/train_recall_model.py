@@ -21,12 +21,13 @@ from src.constants.column_names import QAPairCSVColumns
 from src.utils.seed_everything import seed_everything
 from src.model_development.recall_model import RecallModel
 from src.utils.wandb_artifact import load_dataframe_artifact
-from src.pipeline.inference_recall_model import inference
 from src.data_preparation.datasets.base_dataset_v2 import BaseDatasetV2
 from src.data_preparation.negative_sampler.random_sampler import RandomNegativeSampler
+from src.pipeline.inference_recall_model import create_misconception_dataloader
 
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
+os.environ["HF_HOME"] = ".cache"
 torch.set_float32_matmul_precision("medium")
 
 
@@ -109,6 +110,9 @@ def main(args: argparse.Namespace):
         data_config.misconception_data_version,
     )
 
+    if args.debug:
+        df = df.sample(frac=0.1).reset_index(drop=True)
+
     skf = StratifiedGroupKFold(
         n_splits=data_config.num_folds,
         shuffle=True,
@@ -118,8 +122,12 @@ def main(args: argparse.Namespace):
     tokenizer = AutoTokenizer.from_pretrained(model_config.model_path)
     tokenizer.pad_token = tokenizer.eos_token
 
-    all_preds = []
-    all_labels = []
+    misconception_dataloader = create_misconception_dataloader(
+        misconception_df,
+        tokenizer,
+        data_config.batch_size,
+        data_config.num_workers,
+    )
 
     for fold, (train_idx, val_idx) in enumerate(
         skf.split(
@@ -138,59 +146,23 @@ def main(args: argparse.Namespace):
         )
 
         model_config.fold = fold
-        best_model = train_model(
+        train_model(
             model_config,
             trainer_config,
             fold,
             train_loader,
             val_loader,
+            misconception_dataloader,
             tokenizer,
         )
-
-        preds, labels = inference(
-            best_model,
-            misconception_df,
-            tokenizer,
-            data_config.batch_size,
-            data_config.num_workers,
-            val_loader,
-        )
-
-        if args.debug:
-            np.save(f"output_dir/preds_{fold}.npy", preds)
-            np.save(f"output_dir/labels_{fold}.npy", labels)
-
-        all_preds.append(preds)
-        all_labels.append(labels)
-
-        map_score = best_model.map_calculator.calculate_batch_map(
-            actual_indices=labels,
-            rankings_batch=preds,
-        )
-
-        wandb.log({f"map_score_{fold}": map_score})
 
         if args.debug:
             break
 
-        del train_loader, val_loader
         torch.cuda.empty_cache()
         gc.collect()
 
-    if args.debug:
-        np.save("output_dir/all_preds.npy", np.concatenate(all_preds))
-        np.save("output_dir/all_labels.npy", np.concatenate(all_labels))
-
-    map_score = best_model.map_calculator.calculate_batch_map(
-        actual_indices=np.concatenate(all_labels),
-        rankings_batch=np.concatenate(all_preds),
-    )
-    wandb.log({"overall_map_score": map_score})
     wandb.finish()
-
-    del best_model
-    torch.cuda.empty_cache()
-    gc.collect()
 
     if args.train_with_all:
         train_with_all_data(
@@ -317,6 +289,7 @@ def train_model(
     fold: int,
     train_loader: DataLoader,
     val_loader: DataLoader,
+    misconception_dataloader: DataLoader,
     tokenizer: AutoTokenizer,
 ) -> RecallModel:
     """Train the recall model for a given fold.
@@ -327,11 +300,11 @@ def train_model(
         fold (int): Fold number.
         train_loader (DataLoader): Training data loader.
         val_loader (DataLoader): Validation data loader.
+        misconception_dataloader (DataLoader): Misconception data loader.
         tokenizer (AutoTokenizer): Tokenizer for the dataset.
-    Returns:
-        RecallModel: Best model.
     """
     model = RecallModel(model_config, tokenizer)
+    model.set_misconception_dataloader(misconception_dataloader)
 
     checkpoint_callback = ModelCheckpoint(
         monitor=f"val_loss_{fold}",
@@ -358,18 +331,6 @@ def train_model(
         logger=wandb_logger,
     )
     trainer.fit(model, train_loader, val_loader)
-
-    del model
-    torch.cuda.empty_cache()
-    gc.collect()
-
-    best_model_path = checkpoint_callback.best_model_path
-    best_model = RecallModel.load_from_checkpoint(
-        best_model_path,
-        config=model_config,
-        tokenizer=tokenizer,
-    )
-    return best_model.eval()
 
 
 if __name__ == "__main__":

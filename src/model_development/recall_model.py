@@ -5,13 +5,17 @@ import pytorch_lightning as pl
 from transformers import AutoModel, AutoTokenizer, BitsAndBytesConfig
 from peft import prepare_model_for_kbit_training
 from peft import LoraConfig, get_peft_model
+from torch.utils.data import DataLoader
 
 from src.constants.column_names import ContrastiveTorchDatasetColumns
 from src.evaluation.map_calculator.map_calculator import MAPCalculator
 from src.model_development.loss_functions import info_nce_loss
 from src.constants.dll_paths import DLLPaths
 from src.configurations.recall_model_config import RecallModelConfig
-from src.model_development.latent_attention.latent_multi_head_attention import LatentMultiHeadAttention
+from src.model_development.latent_attention.latent_multi_head_attention import (
+    LatentMultiHeadAttention,
+)
+from src.utils.searcher.similarity_searcher import SimilaritySearcher
 
 
 class RecallModel(pl.LightningModule):
@@ -24,6 +28,7 @@ class RecallModel(pl.LightningModule):
         self.config = config
 
         self.map_calculator = MAPCalculator(DLLPaths.MAP_CALCULATOR)
+        self.searcher = SimilaritySearcher(DLLPaths.SIMILARITY_SEARCH)
 
         if config.use_lora:
             self.model = AutoModel.from_pretrained(
@@ -77,6 +82,16 @@ class RecallModel(pl.LightningModule):
                 num_heads=config.num_heads,
                 mlp_ratio=config.mlp_ratio,
             )
+
+    def set_misconception_dataloader(self, misconception_dataloader: DataLoader):
+        """Set the misconception dataloader.
+
+        This must be called before doing validation during training process.
+
+        Args:
+            misconception_df (pd.DataFrame): Misconception dataframe.
+        """
+        self.misconception_dataloader = misconception_dataloader
 
     def last_token_pool(
         self,
@@ -242,6 +257,22 @@ class RecallModel(pl.LightningModule):
 
         return loss
 
+    def on_validation_epoch_start(self) -> None:
+        self.misconception_embeddings = torch.cat(
+            [
+                self.get_features(
+                    input_ids=batch["input_ids"].to(self.device),
+                    attention_mask=batch["attention_mask"].to(self.device),
+                )
+                .detach()
+                .cpu()
+                for batch in self.misconception_dataloader
+            ],
+            dim=0,
+        )
+        self.map_score_list = []
+        return super().on_validation_epoch_start()
+
     def validation_step(self, batch, batch_idx):
         similarities = self(
             batch[self.TorchColNames.QUESTION_IDS],
@@ -257,7 +288,7 @@ class RecallModel(pl.LightningModule):
         predictions = torch.argmax(similarities, dim=1)
         accuracy = (predictions == batch[self.TorchColNames.LABEL]).float().mean()
 
-        # Calculate MAP
+        # Calculate MAP on negative samples
         rankings = torch.argsort(similarities, dim=-1, descending=True)
         map = self.map_calculator.calculate_batch_map(
             actual_indices=batch[self.TorchColNames.LABEL].detach().cpu().numpy(),
@@ -266,7 +297,33 @@ class RecallModel(pl.LightningModule):
 
         self._log_metrics(loss, accuracy, map, "val")
 
+        # Calculate MAP for all misconceptions
+        question_embeddings = (
+            self.get_features(
+                input_ids=batch[self.TorchColNames.QUESTION_IDS],
+                attention_mask=batch[self.TorchColNames.QUESTION_MASK],
+            )
+            .detach()
+            .cpu()
+            .numpy()
+        )
+        top_k_misconceptions = self.searcher.batch_search(
+            question_embeddings,
+            self.misconception_embeddings,
+            k=25,
+        )
+        map_score = self.map_calculator.calculate_batch_map(
+            actual_indices=batch[self.TorchColNames.LABEL].detach().cpu().numpy(),
+            rankings_batch=top_k_misconceptions,
+        )
+        self.map_score_list.append(map_score)
+
         return loss
+
+    def on_validation_epoch_end(self) -> None:
+        self.misconception_embeddings = None
+        self.log(f"map_score_{self.config.fold}", torch.tensor(self.map_score_list).mean())
+        return super().on_validation_epoch_end()
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(

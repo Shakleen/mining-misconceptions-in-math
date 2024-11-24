@@ -48,7 +48,7 @@
         "description": "The output dimension of the model. Default is 1024."
     },
     "sentence_pooling_method": {
-        "value": "attention",
+        "value": "cls",
         "description": "The method to use for sentence pooling. Default is 'cls'. Can be 'mean', 'cls', 'last', or 'attention'."
     }
 }
