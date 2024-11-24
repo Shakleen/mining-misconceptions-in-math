@@ -26,8 +26,8 @@ class HardNegativeSampler(AbstractNegativeSampler):
 
     def sample(self, actual_misconception_id: int) -> List[int]:
         hard_negative_ids = self._get_hard_negative_samples(actual_misconception_id)
-
-        output = set([actual_misconception_id] + hard_negative_ids)
+        hard_negative_ids.append(actual_misconception_id)
+        output = set(hard_negative_ids)
 
         while len(output) < self.sample_size:
             output.add(random.randint(0, self.total_misconceptions - 1))
@@ -47,4 +47,4 @@ class HardNegativeSampler(AbstractNegativeSampler):
             k=hard_negative_count,
         )
 
-        return hard_negative_ids
+        return hard_negative_ids.tolist()
