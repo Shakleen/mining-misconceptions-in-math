@@ -307,14 +307,14 @@ def train_model(
     model.set_misconception_dataloader(misconception_dataloader)
 
     checkpoint_callback = ModelCheckpoint(
-        monitor=f"val_loss_{fold}",
-        mode="min",
+        monitor=f"map_score_{fold}",
+        mode="max",
         save_top_k=1,
         filename=f"best-checkpoint-{fold}",
     )
     early_stopping_callback = EarlyStopping(
-        monitor=f"val_loss_{fold}",
-        mode="min",
+        monitor=f"map_score_{fold}",
+        mode="max",
         patience=trainer_config.patience,
     )
     wandb_logger = WandbLogger(
