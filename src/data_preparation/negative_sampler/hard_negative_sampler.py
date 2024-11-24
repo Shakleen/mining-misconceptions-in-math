@@ -1,15 +1,19 @@
 from typing import List, Optional
 import random
 import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
 from src.data_preparation.negative_sampler.abstract_negative_sampler import (
     AbstractNegativeSampler,
 )
-from src.utils.searcher.similarity_searcher import SimilaritySearcher
-from src.constants.dll_paths import DLLPaths
 
 
 class HardNegativeSampler(AbstractNegativeSampler):
-    """Hard negative sampler."""
+    """Hard negative sampler.
+
+    A portion of the negative samples are hard negatives, which are the most similar misconceptions to the actual misconception.
+    The rest of the negative samples are random misconceptions.
+    """
 
     def __init__(
         self,
@@ -21,7 +25,6 @@ class HardNegativeSampler(AbstractNegativeSampler):
         super().__init__(sample_size)
         self.total_misconceptions = total_misconceptions
         self.hard_to_random_ratio = hard_to_random_ratio
-        self.similarity_searcher = SimilaritySearcher(DLLPaths.SIMILARITY_SEARCH)
         self.misconception_embeddings = misconception_embeddings
 
     def sample(self, actual_misconception_id: int) -> List[int]:
@@ -38,13 +41,12 @@ class HardNegativeSampler(AbstractNegativeSampler):
         return output
 
     def _get_hard_negative_samples(self, actual_misconception_id):
-        m_embedding = self.misconception_embeddings[actual_misconception_id]
+        m_embedding = self.misconception_embeddings[actual_misconception_id].reshape(
+            1, -1
+        )
         hard_negative_count = int(self.sample_size * self.hard_to_random_ratio)
 
-        hard_negative_ids = self.similarity_searcher.search(
-            m_embedding,
-            self.misconception_embeddings,
-            k=hard_negative_count,
-        )
+        similarities = cosine_similarity(m_embedding, self.misconception_embeddings)
+        hard_negative_ids = np.argsort(similarities)[::-1][1 : hard_negative_count + 1]
 
         return hard_negative_ids.tolist()
