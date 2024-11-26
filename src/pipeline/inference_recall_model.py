@@ -55,13 +55,14 @@ def inference(
             total=len(val_loader),
             desc="MAP scoring validation set",
         ):
-            batch = {k: v.to(best_model.device) for k, v in batch.items()}
             question_embeddings = (
-                best_model.get_features(
-                    input_ids=batch[ContrastiveTorchDatasetColumns.QUESTION_IDS],
+                best_model.get_query_features(
+                    input_ids=batch[ContrastiveTorchDatasetColumns.QUESTION_IDS].to(
+                        best_model.device
+                    ),
                     attention_mask=batch[
                         ContrastiveTorchDatasetColumns.QUESTION_MASK
-                    ],
+                    ].to(best_model.device),
                 )
                 .detach()
                 .cpu()
@@ -80,9 +81,19 @@ def inference(
                 all_preds = np.concatenate([all_preds, top_k_misconceptions])
 
             if all_labels is None:
-                all_labels = batch[ContrastiveTorchDatasetColumns.LABEL].detach().cpu().numpy()
+                all_labels = (
+                    batch[ContrastiveTorchDatasetColumns.LABEL].detach().cpu().numpy()
+                )
             else:
-                all_labels = np.concatenate([all_labels, batch[ContrastiveTorchDatasetColumns.LABEL].detach().cpu().numpy()])
+                all_labels = np.concatenate(
+                    [
+                        all_labels,
+                        batch[ContrastiveTorchDatasetColumns.LABEL]
+                        .detach()
+                        .cpu()
+                        .numpy(),
+                    ]
+                )
 
     return all_preds, all_labels
 
@@ -93,7 +104,7 @@ def get_misconception_embeddings(
 ) -> torch.Tensor:
     return torch.cat(
         [
-            best_model.get_features(
+            best_model.get_docs_features(
                 input_ids=batch["input_ids"].to(best_model.device),
                 attention_mask=batch["attention_mask"].to(best_model.device),
             )

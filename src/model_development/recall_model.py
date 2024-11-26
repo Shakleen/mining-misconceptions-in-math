@@ -2,9 +2,14 @@ import torch
 from torch import Tensor
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from transformers import AutoModel, AutoTokenizer, BitsAndBytesConfig
+from transformers import (
+    AutoModel,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+    AutoModelForCausalLM,
+)
 from peft import prepare_model_for_kbit_training
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, get_peft_model, TaskType
 from torch.utils.data import DataLoader
 
 from src.constants.column_names import ContrastiveTorchDatasetColumns
@@ -30,8 +35,20 @@ class RecallModel(pl.LightningModule):
         self.map_calculator = MAPCalculator(DLLPaths.MAP_CALCULATOR)
         self.searcher = SimilaritySearcher(DLLPaths.SIMILARITY_SEARCH)
 
+        self.model = self.get_model(config, tokenizer)
+
+        if config.sentence_pooling_method == "attention":
+            self.latent_attention_layer = LatentMultiHeadAttention(
+                input_dim=self.model.config.hidden_size,
+                hidden_dim=config.hidden_dim,
+                num_latents=config.num_latents,
+                num_heads=config.num_heads,
+                mlp_ratio=config.mlp_ratio,
+            )
+
+    def get_model(self, config, tokenizer):
         if config.use_lora:
-            self.model = AutoModel.from_pretrained(
+            model = AutoModelForCausalLM.from_pretrained(
                 config.model_path,
                 quantization_config=BitsAndBytesConfig(
                     load_in_4bit=True,
@@ -41,10 +58,10 @@ class RecallModel(pl.LightningModule):
                 ),
                 trust_remote_code=True,
             )
-            self.model = prepare_model_for_kbit_training(self.model)
+            model = prepare_model_for_kbit_training(self.model)
 
-            self.model = get_peft_model(
-                self.model,
+            model = get_peft_model(
+                model,
                 LoraConfig(
                     r=config.lora_r,
                     lora_alpha=config.lora_alpha,
@@ -59,29 +76,22 @@ class RecallModel(pl.LightningModule):
                     ],
                     lora_dropout=config.lora_dropout,
                     bias="none",
-                    task_type="CAUSAL_LM",
+                    task_type=TaskType.CAUSAL_LM,
                 ),
             )
         else:
-            self.model = AutoModel.from_pretrained(
+            model = AutoModel.from_pretrained(
                 config.model_path,
                 trust_remote_code=True,
             )
 
         if tokenizer is not None:
-            self.model.resize_token_embeddings(len(tokenizer))
+            model.resize_token_embeddings(len(tokenizer))
 
         if config.gradient_checkpointing:
-            self.model.gradient_checkpointing_enable()
+            model.gradient_checkpointing_enable()
 
-        if config.sentence_pooling_method == "attention":
-            self.latent_attention_layer = LatentMultiHeadAttention(
-                input_dim=self.model.config.hidden_size,
-                hidden_dim=config.hidden_dim,
-                num_latents=config.num_latents,
-                num_heads=config.num_heads,
-                mlp_ratio=config.mlp_ratio,
-            )
+        return model
 
     def set_misconception_dataloader(self, misconception_dataloader: DataLoader):
         """Set the misconception dataloader.
@@ -146,10 +156,16 @@ class RecallModel(pl.LightningModule):
         elif pooling_method == "attention":
             return self.latent_attention_layer(hidden_state)
 
-    def get_features(self, input_ids: Tensor, attention_mask: Tensor) -> Tensor:
+    def _get_features(
+        self,
+        model: AutoModel,
+        input_ids: Tensor,
+        attention_mask: Tensor,
+    ) -> Tensor:
         """Get the features from the model.
 
         Args:
+            model (AutoModel): Model to get features from.
             input_ids (Tensor): Input IDs. Shape: (batch_size, seq_length).
             attention_mask (Tensor): Attention mask. Shape: (batch_size, seq_length).
 
@@ -157,7 +173,7 @@ class RecallModel(pl.LightningModule):
             Tensor: Features. Shape: (batch_size, hidden_size).
         """
         # Shape: (batch_size, seq_length, hidden_size)
-        last_hidden_state = self.model(
+        last_hidden_state = model(
             input_ids=input_ids,
             attention_mask=attention_mask,
         )[0]
@@ -167,6 +183,12 @@ class RecallModel(pl.LightningModule):
             mask=attention_mask,
         )
         return F.normalize(features, p=2, dim=1)
+
+    def get_query_features(self, input_ids: Tensor, attention_mask: Tensor) -> Tensor:
+        return self._get_features(input_ids, attention_mask, model=self.model)
+
+    def get_docs_features(self, input_ids: Tensor, attention_mask: Tensor) -> Tensor:
+        return self._get_features(input_ids, attention_mask, model=self.model)
 
     def forward(
         self,
@@ -188,7 +210,7 @@ class RecallModel(pl.LightningModule):
         """
         # Reshape misconception inputs to encode all at once
         batch_size, num_misconceptions, seq_length = misconception_ids.shape
-        docs = self.get_features(
+        docs = self.get_docs_features(
             input_ids=misconception_ids.view(-1, seq_length),
             attention_mask=misconception_mask.view(-1, seq_length),
         )
@@ -196,7 +218,10 @@ class RecallModel(pl.LightningModule):
         # Reshape back to [batch_size, num_misconceptions, hidden_size]
         docs = docs.view(batch_size, num_misconceptions, -1)
 
-        query = self.get_features(input_ids=question_ids, attention_mask=question_mask)
+        query = self.get_query_features(
+            input_ids=question_ids,
+            attention_mask=question_mask,
+        )
         # Expand query embeddings to match misconception shape
         # Shape: [batch_size, 1, hidden_size]
         query = query.unsqueeze(1)
@@ -260,7 +285,7 @@ class RecallModel(pl.LightningModule):
     def on_validation_epoch_start(self) -> None:
         self.misconception_embeddings = torch.cat(
             [
-                self.get_features(
+                self.get_docs_features(
                     input_ids=batch["input_ids"].to(self.device),
                     attention_mask=batch["attention_mask"].to(self.device),
                 )
@@ -299,7 +324,7 @@ class RecallModel(pl.LightningModule):
 
         # Calculate MAP for all misconceptions
         question_embeddings = (
-            self.get_features(
+            self.get_query_features(
                 input_ids=batch[self.TorchColNames.QUESTION_IDS],
                 attention_mask=batch[self.TorchColNames.QUESTION_MASK],
             )
@@ -322,7 +347,9 @@ class RecallModel(pl.LightningModule):
 
     def on_validation_epoch_end(self) -> None:
         self.misconception_embeddings = None
-        self.log(f"map_score_{self.config.fold}", torch.tensor(self.map_score_list).mean())
+        self.log(
+            f"map_score_{self.config.fold}", torch.tensor(self.map_score_list).mean()
+        )
         return super().on_validation_epoch_end()
 
     def configure_optimizers(self):
