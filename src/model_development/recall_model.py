@@ -35,7 +35,7 @@ class RecallModel(pl.LightningModule):
         self.map_calculator = MAPCalculator(DLLPaths.MAP_CALCULATOR)
         self.searcher = SimilaritySearcher(DLLPaths.SIMILARITY_SEARCH)
 
-        self.model = self.get_model(config, tokenizer)
+        self._setup_encoder(config, tokenizer)
 
         if config.sentence_pooling_method == "attention":
             self.latent_attention_layer = LatentMultiHeadAttention(
@@ -46,7 +46,10 @@ class RecallModel(pl.LightningModule):
                 mlp_ratio=config.mlp_ratio,
             )
 
-    def get_model(self, config, tokenizer):
+    def _setup_encoder(self, config, tokenizer):
+        self.model = self._get_model(config, tokenizer)
+
+    def _get_model(self, config, tokenizer):
         if config.use_lora:
             model = AutoModelForCausalLM.from_pretrained(
                 config.model_path,
@@ -185,10 +188,10 @@ class RecallModel(pl.LightningModule):
         return F.normalize(features, p=2, dim=1)
 
     def get_query_features(self, input_ids: Tensor, attention_mask: Tensor) -> Tensor:
-        return self._get_features(input_ids, attention_mask, model=self.model)
+        return self._get_features(self.model, input_ids, attention_mask)
 
     def get_docs_features(self, input_ids: Tensor, attention_mask: Tensor) -> Tensor:
-        return self._get_features(input_ids, attention_mask, model=self.model)
+        return self._get_features(self.model, input_ids, attention_mask)
 
     def forward(
         self,

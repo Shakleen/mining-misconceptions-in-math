@@ -19,7 +19,7 @@ from src.configurations.data_config import DataConfig
 from src.configurations.trainer_config import TrainerConfig
 from src.constants.column_names import QAPairCSVColumns
 from src.utils.seed_everything import seed_everything
-from src.model_development.recall_model import RecallModel
+from src.model_development.two_tower_model import TwoTowerModel
 from src.utils.wandb_artifact import load_dataframe_artifact
 from src.data_preparation.datasets.base_dataset_v2 import BaseDatasetV2
 from src.data_preparation.negative_sampler.hard_negative_sampler import (
@@ -92,7 +92,7 @@ def main(args: argparse.Namespace):
 
     wandb.init(
         project=WandbProject.PROJECT_NAME,
-        job_type="train-recall-model",
+        job_type="train-two-tower-model",
         config={
             "model_config": model_config.to_dict(),
             "data_config": data_config.to_dict(),
@@ -100,7 +100,7 @@ def main(args: argparse.Namespace):
             "debug": args.debug,
             "seed": args.seed,
         },
-        name=f"recall_model-{wandb.util.generate_id()}",
+        name=f"TT-model-{wandb.util.generate_id()}",
     )
 
     df = load_dataframe_artifact(
@@ -210,7 +210,7 @@ def train_with_all_data(
         collate_fn=lambda x: train_dataset.collate_fn(x, False),
     )
 
-    model = RecallModel(model_config, tokenizer)
+    model = TwoTowerModel(model_config, tokenizer)
     trainer = pl.Trainer(
         accelerator="auto",
         precision="bf16-mixed",
@@ -297,7 +297,7 @@ def train_model(
     val_loader: DataLoader,
     misconception_dataloader: DataLoader,
     tokenizer: AutoTokenizer,
-) -> RecallModel:
+) -> TwoTowerModel:
     """Train the recall model for a given fold.
 
     Args:
@@ -309,18 +309,18 @@ def train_model(
         misconception_dataloader (DataLoader): Misconception data loader.
         tokenizer (AutoTokenizer): Tokenizer for the dataset.
     """
-    model = RecallModel(model_config, tokenizer)
+    model = TwoTowerModel(model_config, tokenizer)
     model.set_misconception_dataloader(misconception_dataloader)
 
     checkpoint_callback = ModelCheckpoint(
-        monitor=f"map_score_{fold}",
-        mode="max",
+        monitor=f"val_loss_{fold}",
+        mode="min",
         save_top_k=1,
         filename=f"best-checkpoint-{fold}",
     )
     early_stopping_callback = EarlyStopping(
-        monitor=f"map_score_{fold}",
-        mode="max",
+        monitor=f"val_loss_{fold}",
+        mode="min",
         patience=trainer_config.patience,
     )
     wandb_logger = WandbLogger(
