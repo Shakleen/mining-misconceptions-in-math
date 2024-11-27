@@ -47,7 +47,7 @@ class RecallModel(pl.LightningModule):
     def _setup_encoder(self, config):
         self.model = self._get_model(config)
 
-    def _get_model(self, config, tokenizer):
+    def _get_model(self, config):
         if config.use_lora:
             model = AutoModelForCausalLM.from_pretrained(
                 config.model_path,

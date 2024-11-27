@@ -25,7 +25,7 @@ from src.data_preparation.datasets.base_dataset_v2 import BaseDatasetV2
 from src.data_preparation.negative_sampler.hard_negative_sampler import (
     HardNegativeSampler,
 )
-from src.pipeline.inference_recall_model import create_misconception_dataloader
+from src.pipeline.embbed_misconceptions import create_misconception_dataloader
 
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"

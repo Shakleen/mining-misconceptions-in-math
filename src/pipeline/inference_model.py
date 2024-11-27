@@ -7,10 +7,10 @@ from torch.utils.data import DataLoader
 import numpy as np
 
 from src.model_development.recall_model import RecallModel
-from src.data_preparation.datasets.misconception_dataset import MisconceptionDataset
 from src.constants.column_names import ContrastiveTorchDatasetColumns
 from src.utils.searcher.similarity_searcher import SimilaritySearcher
 from src.constants.dll_paths import DLLPaths
+from src.pipeline.embbed_misconceptions import create_misconception_dataloader, get_misconception_embeddings
 
 
 def inference(
@@ -96,41 +96,3 @@ def inference(
                 )
 
     return all_preds, all_labels
-
-
-def get_misconception_embeddings(
-    misconception_dataloader: DataLoader,
-    best_model: RecallModel,
-) -> torch.Tensor:
-    return torch.cat(
-        [
-            best_model.get_docs_features(
-                input_ids=batch["input_ids"].to(best_model.device),
-                attention_mask=batch["attention_mask"].to(best_model.device),
-            )
-            .detach()
-            .cpu()
-            for batch in tqdm(
-                misconception_dataloader,
-                total=len(misconception_dataloader),
-                desc="Generating misconception embeddings",
-            )
-        ],
-        dim=0,
-    )
-
-
-def create_misconception_dataloader(
-    df: pd.DataFrame,
-    tokenizer: AutoTokenizer,
-    batch_size: int,
-    num_workers: int,
-) -> DataLoader:
-    dataset = MisconceptionDataset(df, tokenizer)
-    return DataLoader(
-        dataset,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        shuffle=False,
-        collate_fn=dataset.collate_fn,
-    )
