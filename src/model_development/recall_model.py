@@ -226,7 +226,7 @@ class RecallModel(pl.LightningModule):
         similarities = torch.sum(query * docs, dim=-1)
         return similarities
 
-    def _log_metrics(self, loss: float, accuracy: float, map: float, phase: str):
+    def _log_metrics(self, loss: float, accuracy: float, phase: str):
         """Log metrics for the model.
 
         Throws an assertion error if the phase is not valid.
