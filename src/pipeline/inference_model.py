@@ -2,12 +2,10 @@ import pandas as pd
 from transformers import AutoTokenizer
 from torch.utils.data import DataLoader
 import torch
-
+from tqdm import tqdm
 from src.constants.column_names import (
     TrainCSVColumns,
     QAPairCSVColumns,
-    MisconceptionsCSVColumns,
-    ContrastiveCSVColumns,
     SubmissionCSVColumns,
 )
 from src.data_preparation.datasets.question_details_dataset import (
@@ -57,6 +55,70 @@ def convert_to_qa_pair(df: pd.DataFrame) -> pd.DataFrame:
     return contrastive_df
 
 
+def generate_submission_df(
+    dataloader: DataLoader,
+    misconception_embeddings: torch.Tensor,
+    model: TwoTowerModel,
+) -> pd.DataFrame:
+    submission_df = pd.DataFrame()
+
+    with torch.no_grad():
+        for batch in tqdm(
+            dataloader, total=len(dataloader), desc="Generating submission dataframe"
+        ):
+            question_ids = batch["input_ids"].to(model.device)
+            question_mask = batch["attention_mask"].to(model.device)
+
+            q_embeddings = (
+                model.get_query_features(question_ids, question_mask).detach().cpu()
+            )
+
+            similarities = q_embeddings @ misconception_embeddings.T
+            rankings = similarities.argsort(dim=1, descending=True)[:, :25].tolist()
+
+            ids = qa_df.iloc[batch["index"].tolist()][
+                QAPairCSVColumns.QUESTION_ID
+            ].tolist()
+
+            mids = [" ".join(str(x) for x in ranking) for ranking in rankings]
+
+            print(len(ids), len(mids))
+
+            submission_df = pd.concat(
+                [
+                    submission_df,
+                    pd.DataFrame(
+                        {
+                            SubmissionCSVColumns.QUESTION_ID_ANSWER: ids,
+                            SubmissionCSVColumns.MISCONCEPTION_ID: mids,
+                        }
+                    ),
+                ]
+            )
+
+    return submission_df
+
+
+def inference(
+    df: pd.DataFrame,
+    misconceptions_df: pd.DataFrame,
+    model: TwoTowerModel,
+    tokenizer: AutoTokenizer,
+) -> pd.DataFrame:
+    qa_df = convert_to_qa_pair(df)
+    dataset = QuestionDetailsDataset(qa_df, tokenizer, max_length=256)
+    dataloader = DataLoader(dataset, batch_size=16, shuffle=False)
+    misconception_dataloader = create_misconception_dataloader(
+        misconceptions_df, tokenizer, batch_size=16, num_workers=4
+    )
+
+    misconception_embeddings = get_misconception_embeddings(
+        misconception_dataloader, model
+    )
+
+    return generate_submission_df(dataloader, misconception_embeddings, model)
+
+
 if __name__ == "__main__":
     df = pd.read_csv("data/test-datasetdgy7k5rw.csv")
     misconceptions_df = pd.read_csv("data/misconceptions-datasetas216_mx.csv")
@@ -70,44 +132,6 @@ if __name__ == "__main__":
         config=model_config,
     ).eval()
 
-    dataset = QuestionDetailsDataset(qa_df, tokenizer, max_length=256)
-    dataloader = DataLoader(dataset, batch_size=16, shuffle=False)
-    misconception_dataloader = create_misconception_dataloader(
-        misconceptions_df, tokenizer, batch_size=16, num_workers=4
-    )
+    submission_df = inference(df, misconceptions_df, model, tokenizer)
 
-    misconception_embeddings = get_misconception_embeddings(
-        misconception_dataloader, model
-    )
-
-    submission_df = pd.DataFrame()
-
-    with torch.no_grad():
-        for batch in dataloader:
-            question_ids = batch["input_ids"].to(model.device)
-            question_mask = batch["attention_mask"].to(model.device)
-
-            q_embeddings = (
-                model.get_query_features(question_ids, question_mask).detach().cpu()
-            )
-
-            similarities = q_embeddings @ misconception_embeddings.T
-            rankings = similarities.argsort(dim=1, descending=True)[:, :25].tolist()
-
-            for idx, ranking in zip(batch["index"].tolist(), rankings):
-                submission_df = pd.concat(
-                    [
-                        submission_df,
-                        pd.DataFrame(
-                            {
-                                SubmissionCSVColumns.QUESTION_ID_ANSWER: [
-                                    qa_df.iloc[idx][QAPairCSVColumns.QUESTION_ID]
-                                ],
-                                SubmissionCSVColumns.MISCONCEPTION_ID: [' '.join(str(x) for x in ranking)],
-                            }
-                        ),
-                    ]
-                )
-
-            print(submission_df.head())
-            break
+    submission_df.to_csv("submission.csv", index=False)
