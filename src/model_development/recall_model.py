@@ -20,7 +20,6 @@ from src.configurations.recall_model_config import RecallModelConfig
 from src.model_development.latent_attention.latent_multi_head_attention import (
     LatentMultiHeadAttention,
 )
-from src.utils.searcher.similarity_searcher import SimilaritySearcher
 
 
 class RecallModel(pl.LightningModule):
@@ -28,14 +27,13 @@ class RecallModel(pl.LightningModule):
     def TorchColNames(self):
         return ContrastiveTorchDatasetColumns
 
-    def __init__(self, config: RecallModelConfig, tokenizer: AutoTokenizer = None):
+    def __init__(self, config: RecallModelConfig):
         super().__init__()
         self.config = config
 
         self.map_calculator = MAPCalculator(DLLPaths.MAP_CALCULATOR)
-        self.searcher = SimilaritySearcher(DLLPaths.SIMILARITY_SEARCH)
 
-        self._setup_encoder(config, tokenizer)
+        self._setup_encoder(config)
 
         if config.sentence_pooling_method == "attention":
             self.latent_attention_layer = LatentMultiHeadAttention(
@@ -46,8 +44,8 @@ class RecallModel(pl.LightningModule):
                 mlp_ratio=config.mlp_ratio,
             )
 
-    def _setup_encoder(self, config, tokenizer):
-        self.model = self._get_model(config, tokenizer)
+    def _setup_encoder(self, config):
+        self.model = self._get_model(config)
 
     def _get_model(self, config, tokenizer):
         if config.use_lora:
@@ -87,9 +85,6 @@ class RecallModel(pl.LightningModule):
                 config.model_path,
                 trust_remote_code=True,
             )
-
-        if tokenizer is not None:
-            model.resize_token_embeddings(len(tokenizer))
 
         if config.gradient_checkpointing:
             model.gradient_checkpointing_enable()
@@ -278,6 +273,7 @@ class RecallModel(pl.LightningModule):
         map = self.map_calculator.calculate_batch_map(
             actual_indices=batch[self.TorchColNames.LABEL].detach().cpu().numpy(),
             rankings_batch=rankings.detach().cpu().numpy(),
+            rankings_per_query=25,
         )
 
         # Log metrics
@@ -321,6 +317,7 @@ class RecallModel(pl.LightningModule):
         map = self.map_calculator.calculate_batch_map(
             actual_indices=batch[self.TorchColNames.LABEL].detach().cpu().numpy(),
             rankings_batch=rankings.detach().cpu().numpy(),
+            rankings_per_query=25,
         )
 
         self._log_metrics(loss, accuracy, map, "val")
@@ -333,16 +330,13 @@ class RecallModel(pl.LightningModule):
             )
             .detach()
             .cpu()
-            .numpy()
         )
-        top_k_misconceptions = self.searcher.batch_search(
-            question_embeddings,
-            self.misconception_embeddings,
-            k=25,
-        )
+        similarities = question_embeddings @ self.misconception_embeddings.T
+        rankings = torch.argsort(similarities, dim=-1, descending=True)[:, :25]
         map_score = self.map_calculator.calculate_batch_map(
             actual_indices=batch[self.TorchColNames.LABEL].detach().cpu().numpy(),
-            rankings_batch=top_k_misconceptions,
+            rankings_batch=rankings.detach().cpu().numpy(),
+            rankings_per_query=25,
         )
         self.map_score_list.append(map_score)
 

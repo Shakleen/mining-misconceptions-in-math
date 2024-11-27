@@ -2,7 +2,7 @@
 import ctypes
 import numpy as np
 import os
-from typing import Union, List
+from typing import Union, List, Optional
 
 from src.constants.dll_paths import DLLPaths
 
@@ -65,6 +65,7 @@ class MAPCalculator:
         self,
         actual_indices: Union[List[int], np.ndarray],
         rankings_batch: Union[List[List[int]], np.ndarray],
+        rankings_per_query: Optional[int] = None,
     ) -> float:
         """
         Calculate Mean Average Precision for a batch of queries.
@@ -81,7 +82,12 @@ class MAPCalculator:
         rankings_batch_array = np.asarray(rankings_batch, dtype=np.int32)
 
         num_queries = len(actual_indices_array)
-        rankings_per_query = rankings_batch_array.shape[1]
+        rankings_per_query = (
+            rankings_batch_array.shape[1]
+            if rankings_per_query is None
+            else rankings_per_query
+        )
+        rankings_per_query = min(rankings_per_query, rankings_batch_array.shape[1])
 
         # Ensure the rankings array is contiguous in memory
         rankings_batch_array = np.ascontiguousarray(rankings_batch_array)

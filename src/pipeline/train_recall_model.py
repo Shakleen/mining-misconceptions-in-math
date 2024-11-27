@@ -155,7 +155,6 @@ def main(args: argparse.Namespace):
             train_loader,
             val_loader,
             misconception_dataloader,
-            tokenizer,
         )
 
         if args.debug:
@@ -210,7 +209,7 @@ def train_with_all_data(
         collate_fn=lambda x: train_dataset.collate_fn(x, False),
     )
 
-    model = TwoTowerModel(model_config, tokenizer)
+    model = TwoTowerModel(model_config)
     trainer = pl.Trainer(
         accelerator="auto",
         precision="bf16-mixed",
@@ -296,7 +295,6 @@ def train_model(
     train_loader: DataLoader,
     val_loader: DataLoader,
     misconception_dataloader: DataLoader,
-    tokenizer: AutoTokenizer,
 ) -> TwoTowerModel:
     """Train the recall model for a given fold.
 
@@ -307,9 +305,8 @@ def train_model(
         train_loader (DataLoader): Training data loader.
         val_loader (DataLoader): Validation data loader.
         misconception_dataloader (DataLoader): Misconception data loader.
-        tokenizer (AutoTokenizer): Tokenizer for the dataset.
     """
-    model = TwoTowerModel(model_config, tokenizer)
+    model = TwoTowerModel(model_config)
     model.set_misconception_dataloader(misconception_dataloader)
 
     checkpoint_callback = ModelCheckpoint(
