@@ -4,7 +4,6 @@ import torch.nn.functional as F
 import pytorch_lightning as pl
 from transformers import (
     AutoModel,
-    AutoTokenizer,
     BitsAndBytesConfig,
     AutoModelForCausalLM,
 )
@@ -245,7 +244,6 @@ class RecallModel(pl.LightningModule):
 
         self.log(f"{phase}_loss_{self.config.fold}", loss)
         self.log(f"{phase}_accuracy_{self.config.fold}", accuracy)
-        self.log(f"{phase}_map_{self.config.fold}", map)
 
         if phase == "train":
             self.log(
@@ -268,16 +266,8 @@ class RecallModel(pl.LightningModule):
         predictions = torch.argmax(similarities, dim=1)
         accuracy = (predictions == batch[self.TorchColNames.LABEL]).float().mean()
 
-        # Calculate MAP
-        rankings = torch.argsort(similarities, dim=-1, descending=True)
-        map = self.map_calculator.calculate_batch_map(
-            actual_indices=batch[self.TorchColNames.LABEL].detach().cpu().numpy(),
-            rankings_batch=rankings.detach().cpu().numpy(),
-            rankings_per_query=25,
-        )
-
         # Log metrics
-        self._log_metrics(loss, accuracy, map, "train")
+        self._log_metrics(loss, accuracy, "train")
 
         return loss
 
@@ -294,7 +284,8 @@ class RecallModel(pl.LightningModule):
             ],
             dim=0,
         )
-        self.map_score_list = []
+        self.map_scores = {25: [], 50: [], 100: [], 250: [], 500: []}
+
         return super().on_validation_epoch_start()
 
     def validation_step(self, batch, batch_idx):
@@ -312,15 +303,7 @@ class RecallModel(pl.LightningModule):
         predictions = torch.argmax(similarities, dim=1)
         accuracy = (predictions == batch[self.TorchColNames.LABEL]).float().mean()
 
-        # Calculate MAP on negative samples
-        rankings = torch.argsort(similarities, dim=-1, descending=True)
-        map = self.map_calculator.calculate_batch_map(
-            actual_indices=batch[self.TorchColNames.LABEL].detach().cpu().numpy(),
-            rankings_batch=rankings.detach().cpu().numpy(),
-            rankings_per_query=25,
-        )
-
-        self._log_metrics(loss, accuracy, map, "val")
+        self._log_metrics(loss, accuracy, "val")
 
         # Calculate MAP for all misconceptions
         question_embeddings = (
@@ -332,21 +315,29 @@ class RecallModel(pl.LightningModule):
             .cpu()
         )
         similarities = question_embeddings @ self.misconception_embeddings.T
-        rankings = torch.argsort(similarities, dim=-1, descending=True)[:, :25]
-        map_score = self.map_calculator.calculate_batch_map(
-            actual_indices=batch[self.TorchColNames.LABEL].detach().cpu().numpy(),
-            rankings_batch=rankings.detach().cpu().numpy(),
-            rankings_per_query=25,
-        )
-        self.map_score_list.append(map_score)
+        rankings = torch.argsort(similarities, dim=-1, descending=True)
+
+        for k in self.map_scores.keys():
+            self.map_scores[k].append(
+                self.map_calculator.calculate_batch_map(
+                    actual_indices=batch[self.TorchColNames.LABEL]
+                    .detach()
+                    .cpu()
+                    .numpy(),
+                    rankings_batch=rankings[:, :k].detach().cpu().numpy(),
+                    rankings_per_query=k,
+                )
+            )
 
         return loss
 
     def on_validation_epoch_end(self) -> None:
         self.misconception_embeddings = None
-        self.log(
-            f"map_score_{self.config.fold}", torch.tensor(self.map_score_list).mean()
-        )
+        for k in self.map_scores.keys():
+            self.log(
+                f"map@{k}_{self.config.fold}",
+                torch.tensor(self.map_scores[k]).mean(),
+            )
         return super().on_validation_epoch_end()
 
     def configure_optimizers(self):
