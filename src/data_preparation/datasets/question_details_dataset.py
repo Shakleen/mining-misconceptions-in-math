@@ -43,6 +43,7 @@ class QuestionDetailsDataset(Dataset):
         query_encoding = self._get_query_encoding(row)
 
         return {
+            "index": torch.tensor(idx, dtype=torch.long),
             "input_ids": query_encoding["input_ids"].squeeze(0),
             "attention_mask": query_encoding["attention_mask"].squeeze(0),
         }
