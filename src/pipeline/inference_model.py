@@ -1,98 +1,57 @@
-from typing import List, Tuple
-import torch
-from tqdm import tqdm
 import pandas as pd
-from transformers import AutoTokenizer
-from torch.utils.data import DataLoader
-import numpy as np
 
-from src.model_development.recall_model import RecallModel
-from src.constants.column_names import ContrastiveTorchDatasetColumns
-from src.utils.searcher.similarity_searcher import SimilaritySearcher
-from src.constants.dll_paths import DLLPaths
-from src.pipeline.embbed_misconceptions import create_misconception_dataloader, get_misconception_embeddings
+from src.constants.column_names import (
+    TrainCSVColumns,
+    MisconceptionsCSVColumns,
+    ContrastiveCSVColumns,
+    SubmissionCSVColumns,
+)
 
 
-def inference(
-    best_model: RecallModel,
-    misconception_df: pd.DataFrame,
-    tokenizer: AutoTokenizer,
-    batch_size: int,
-    num_workers: int,
-    val_loader: DataLoader,
-) -> Tuple[List[List[int]], List[List[int]]]:
-    """Inference for the recall model.
-
-    Args:
-        best_model (RecallModel): Best model.
-        misconception_df (pd.DataFrame): Misconception dataframe.
-        tokenizer (AutoTokenizer): Tokenizer.
-        batch_size (int): Batch size.
-        num_workers (int): Number of workers.
-        val_loader (DataLoader): Validation data loader.
-
-    Returns:
-        Tuple[List[List[int]], List[List[int]]]: Predictions and labels.
-    """
-    misconception_dataloader = create_misconception_dataloader(
-        misconception_df,
-        tokenizer,
-        batch_size,
-        num_workers,
+def convert_to_qa_pair(df: pd.DataFrame) -> pd.DataFrame:
+    query = (
+        "Given subject, construct, question and incorrect answer, "
+        + "retrieve the list of misconceptions that are related to the incorrect answer."
+        + "\nSubject: {subject}"
+        + "\nConstruct: {construct}"
+        + "\nQuestion: {question}"
+        + "\nIncorrect Answer: {incorrect_answer}"
     )
-    searcher = SimilaritySearcher(DLLPaths.SIMILARITY_SEARCH)
 
-    with torch.no_grad():
-        all_misconceptions_embeddings = get_misconception_embeddings(
-            misconception_dataloader, best_model
-        )
+    contrastive_df = pd.DataFrame()
 
-        all_labels = None
-        all_preds = None
+    for _, row in df.iterrows():
+        for option in ["A", "B", "C", "D"]:
+            if option == row[TrainCSVColumns.CORRECT_ANSWER]:
+                continue
 
-        for batch in tqdm(
-            val_loader,
-            total=len(val_loader),
-            desc="MAP scoring validation set",
-        ):
-            question_embeddings = (
-                best_model.get_query_features(
-                    input_ids=batch[ContrastiveTorchDatasetColumns.QUESTION_IDS].to(
-                        best_model.device
+            row_query = query.format(
+                subject=row[TrainCSVColumns.SUBJECT_NAME],
+                construct=row[TrainCSVColumns.CONSTRUCT_NAME],
+                question=row[TrainCSVColumns.QUESTION_TEXT],
+                incorrect_answer=row[
+                    TrainCSVColumns.ANSWER_FORMAT.format(option=option)
+                ],
+            )
+
+            contrastive_df = pd.concat(
+                [
+                    contrastive_df,
+                    pd.DataFrame(
+                        {
+                            SubmissionCSVColumns.QUESTION_ID_ANSWER: [
+                                f"{row[TrainCSVColumns.QUESTION_ID]}_{option}"
+                            ],
+                            ContrastiveCSVColumns.QUESTION_DETAILS: [row_query],
+                        }
                     ),
-                    attention_mask=batch[
-                        ContrastiveTorchDatasetColumns.QUESTION_MASK
-                    ].to(best_model.device),
-                )
-                .detach()
-                .cpu()
-                .numpy()
+                ]
             )
 
-            top_k_misconceptions = searcher.batch_search(
-                question_embeddings,
-                all_misconceptions_embeddings,
-                k=25,
-            )
+    return contrastive_df
 
-            if all_preds is None:
-                all_preds = top_k_misconceptions
-            else:
-                all_preds = np.concatenate([all_preds, top_k_misconceptions])
 
-            if all_labels is None:
-                all_labels = (
-                    batch[ContrastiveTorchDatasetColumns.LABEL].detach().cpu().numpy()
-                )
-            else:
-                all_labels = np.concatenate(
-                    [
-                        all_labels,
-                        batch[ContrastiveTorchDatasetColumns.LABEL]
-                        .detach()
-                        .cpu()
-                        .numpy(),
-                    ]
-                )
-
-    return all_preds, all_labels
+if __name__ == "__main__":
+    df = pd.read_csv("data/test-datasetdgy7k5rw.csv")
+    contrastive_df = convert_to_qa_pair(df)
+    

@@ -25,6 +25,13 @@ class TrainCSVColumns:
     MISCONCEPTION_FORMAT = "Misconception{option}Id"
 
 
+class SubmissionCSVColumns:
+    """Column names for the submission dataset."""
+
+    QUESTION_ID_ANSWER = "QuestionId_Answer"
+    MISCONCEPTION_ID = "MisconceptionId"
+
+
 class MisconceptionsCSVColumns:
     """Column names for the misconceptions dataset."""
 
