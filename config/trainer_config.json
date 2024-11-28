@@ -8,7 +8,7 @@
         "description": "Directory to store the checkpoint model."
     },
     "num_epochs": {
-        "value": 10,
+        "value": 20,
         "description": "Number of epochs to train the model. Default is 5."
     },
     "patience": {
@@ -20,7 +20,7 @@
         "description": "Number of steps to log the training metrics. Default is 20."
     },
     "val_check_interval": {
-        "value": 0.5,
+        "value": 1.0,
         "description": "Validation check interval. Default is 1.0."
     }
 }

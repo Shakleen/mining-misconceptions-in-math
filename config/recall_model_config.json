@@ -20,7 +20,7 @@
         "description": "The dropout rate for the LoRA matrices. Default is 0.05."
     },
     "learning_rate": {
-        "value": 1e-4,
+        "value": 1e-5,
         "description": "The learning rate for the model. Default is 1e-4."
     },
     "gradient_checkpointing": {

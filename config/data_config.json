@@ -8,7 +8,7 @@
         "description": "Version of misconception data artifact stored in W&B."
     },
     "negative_sample_size": {
-        "value": 100,
+        "value": 25,
         "description": "Number of negative samples in each row. Defaults to 10"
     },
     "num_folds": {
@@ -16,7 +16,7 @@
         "description": "Number of folds to use for cross-validation. Default is 5."
     },
     "batch_size": {
-        "value": 8,
+        "value": 32,
         "description": "Batch size for training. Default is 16."
     },
     "num_workers": {
@@ -32,7 +32,7 @@
         "description": "Maximum length of the misconception. Default is 64."
     },
     "hard_to_random_ratio": {
-        "value": 0.25,
+        "value": 0.2,
         "description": "Ratio of hard negatives to random negatives. Default is 0.25."
     },
     "misconception_embeddings_path": {

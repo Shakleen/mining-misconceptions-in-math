@@ -284,7 +284,8 @@ class RecallModel(pl.LightningModule):
             ],
             dim=0,
         )
-        self.map_scores = {25: [], 50: [], 100: [], 250: [], 500: []}
+        self.acc_scores = {25: [], 50: [], 100: [], 250: [], 500: []}
+        self.map_scores = []
 
         return super().on_validation_epoch_start()
 
@@ -315,28 +316,31 @@ class RecallModel(pl.LightningModule):
             .cpu()
         )
         similarities = question_embeddings @ self.misconception_embeddings.T
-        rankings = torch.argsort(similarities, dim=-1, descending=True)
+        rankings = (
+            torch.argsort(similarities, dim=-1, descending=True).detach().cpu().numpy()
+        )
+        labels = batch[self.TorchColNames.LABEL].detach().cpu().numpy()
+        self.map_scores.append(
+            self.map_calculator.calculate_batch_map(
+                actual_indices=labels,
+                rankings_batch=rankings,
+                rankings_per_query=25,
+            )
+        )
 
-        for k in self.map_scores.keys():
-            self.map_scores[k].append(
-                self.map_calculator.calculate_batch_map(
-                    actual_indices=batch[self.TorchColNames.LABEL]
-                    .detach()
-                    .cpu()
-                    .numpy(),
-                    rankings_batch=rankings[:, :k].detach().cpu().numpy(),
-                    rankings_per_query=k,
-                )
+        for k in self.acc_scores.keys():
+            self.acc_scores[k].append(
+                (rankings[:, :k] == labels.reshape(-1, 1)).sum(axis=1).mean()
             )
 
         return loss
 
     def on_validation_epoch_end(self) -> None:
         self.misconception_embeddings = None
-        for k in self.map_scores.keys():
+        self.log(f"map@25_{self.config.fold}", torch.tensor(self.map_scores).mean())
+        for k in self.acc_scores.keys():
             self.log(
-                f"map@{k}_{self.config.fold}",
-                torch.tensor(self.map_scores[k]).mean(),
+                f"acc@{k}_{self.config.fold}", torch.tensor(self.acc_scores[k]).mean()
             )
         return super().on_validation_epoch_end()
 
