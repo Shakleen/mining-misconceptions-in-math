@@ -44,11 +44,9 @@ def contrastive_loss(
     mask = torch.ones_like(similarities)
     mask[torch.arange(batch_size), labels] = 0  # Set positives to be 0
 
-    positive_similarities = similarities[mask == 0].view(batch_size, -1)
-    negative_similarities = similarities[mask == 1].view(batch_size, -1)
+    exp = torch.exp(similarities / temperature)
 
-    positive_exp = torch.exp(positive_similarities / temperature)
-    negative_exp = torch.exp(negative_similarities / temperature)
+    positive_exp = exp[mask == 0].view(batch_size, -1)
 
-    loss = -torch.log(positive_exp / negative_exp.sum(dim=1))
+    loss = -torch.log(positive_exp / exp.sum(dim=1))
     return loss.mean()
