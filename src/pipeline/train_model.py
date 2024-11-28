@@ -70,7 +70,7 @@ def main(args: argparse.Namespace):
             "debug": args.debug,
             "seed": args.seed,
         },
-        name=f"TT-model-{wandb.util.generate_id()}",
+        name=f"TT-{wandb.util.generate_id()}",
     )
 
     df = load_dataframe_artifact(

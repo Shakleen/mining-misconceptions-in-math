@@ -67,14 +67,7 @@ class BaseDatasetV2(AbstractDataset):
         )
         self.misconceptions_df = misconceptions_df
         self.negative_sampler = negative_sampler
-        self.query = (
-            "Given subject, construct, question and incorrect answer, "
-            + "retrieve the list of misconceptions that are related to the incorrect answer."
-            + "\nSubject: {subject}"
-            + "\nConstruct: {construct}"
-            + "\nQuestion: {question}"
-            + "\nIncorrect Answer: {incorrect_answer}"
-        )
+        self.query = "Question: {question}\nIncorrect Answer: {incorrect_answer}"
 
     @property
     def CSVColName(self):
@@ -178,14 +171,10 @@ class BaseDatasetV2(AbstractDataset):
 
     def _get_query_encoding(self, row: pd.Series) -> Dict[str, torch.Tensor]:
         question_text = row[self.CSVColName.QUESTION_TEXT]
-        subject_name = row[self.CSVColName.SUBJECT_NAME]
-        construct_name = row[self.CSVColName.CONSTRUCT_NAME]
         answer_text = row[self.CSVColName.ANSWER_TEXT]
 
         query_text = self.query.format(
             question=question_text,
-            subject=subject_name,
-            construct=construct_name,
             incorrect_answer=answer_text,
         )
 
