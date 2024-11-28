@@ -89,3 +89,4 @@ class QAPairCSVColumns:
     ANSWER_TEXT = "AnswerText"
     MISCONCEPTION_ID = MisconceptionsCSVColumns.MISCONCEPTION_ID
     MISCONCEPTION_NAME = MisconceptionsCSVColumns.MISCONCEPTION_NAME
+    SPLIT = "Split"

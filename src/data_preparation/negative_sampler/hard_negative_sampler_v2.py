@@ -12,7 +12,7 @@ class HardNegativeSamplerV2(AbstractNegativeSampler):
     """Hard negative sampler v2.
 
     Hard negatives are sampled from a larger set of similar misconceptions. The larger superset
-    size is controlled by the `super_set_size` parameter. For validation, we sample only the top
+    size is controlled by the `super_set_size_multiplier` parameter. For validation, we sample only the top
     `sample_size` hard negatives. There is no randomness in validation sampling other than shuffling.
     """
 
@@ -21,7 +21,7 @@ class HardNegativeSamplerV2(AbstractNegativeSampler):
         sample_size: int,
         misconception_embeddings: np.ndarray,
         is_validation: bool,
-        super_set_size: Optional[int] = 10,
+        super_set_size_multiplier: Optional[int] = 10,
     ):
         """Random hard negative sampler.
 
@@ -30,15 +30,15 @@ class HardNegativeSamplerV2(AbstractNegativeSampler):
             total_misconceptions (int): Total number of misconceptions.
             misconception_embeddings (np.ndarray): Embeddings of all misconceptions.
             is_validation (bool): Whether the sampler is for validation or training.
-            super_set_size (Optional[int], optional): Size of the super set. Ideally,
-            we want to sample from a larger set of similar misconceptions. This defines
+            super_set_size_multiplier (Optional[int], optional): Multiplier for the super set size.
+            Ideally, we want to sample from a larger set of similar misconceptions. This defines
             how many similar misconceptions we want to sample from. Defaults to 10.
         """
         super().__init__(sample_size)
         self.total_misconceptions = misconception_embeddings.shape[0]
         self.misconception_embeddings = misconception_embeddings
         self.is_validation = is_validation
-        self.super_set_size_multiplier = super_set_size
+        self.super_set_size_multiplier = super_set_size_multiplier
 
         if not self.is_validation:
             self.count = np.zeros(self.total_misconceptions, dtype=np.int32)

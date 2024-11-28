@@ -242,14 +242,11 @@ class RecallModel(pl.LightningModule):
             "val",
         ], "Invalid phase. Must be either 'train' or 'val'."
 
-        self.log(f"{phase}_loss_{self.config.fold}", loss)
-        self.log(f"{phase}_accuracy_{self.config.fold}", accuracy)
+        self.log(f"{phase}_loss", loss)
+        self.log(f"{phase}_accuracy", accuracy)
 
         if phase == "train":
-            self.log(
-                f"learning_rate_{self.config.fold}",
-                self.optimizers().param_groups[0]["lr"],
-            )
+            self.log(f"learning_rate", self.optimizers().param_groups[0]["lr"])
 
     def training_step(self, batch, batch_idx):
         similarities = self(
@@ -337,11 +334,9 @@ class RecallModel(pl.LightningModule):
 
     def on_validation_epoch_end(self) -> None:
         self.misconception_embeddings = None
-        self.log(f"map@25_{self.config.fold}", torch.tensor(self.map_scores).mean())
+        self.log(f"map@25", torch.tensor(self.map_scores).mean())
         for k in self.acc_scores.keys():
-            self.log(
-                f"acc@{k}_{self.config.fold}", torch.tensor(self.acc_scores[k]).mean()
-            )
+            self.log(f"acc@{k}", torch.tensor(self.acc_scores[k]).mean())
         return super().on_validation_epoch_end()
 
     def configure_optimizers(self):

@@ -7,7 +7,7 @@ class DataConfig:
     """Configuration for the data used in the training pipeline."""
     qa_pair_data_version: str
     misconception_data_version: str
-    num_folds: int
+    super_set_size_multiplier: int
     batch_size: int
     num_workers: int
     negative_sample_size: int

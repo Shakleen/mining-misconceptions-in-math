@@ -4,16 +4,16 @@
         "description": "Version of QA pair data artifact stored in W&B."
     },
     "misconception_data_version": {
-        "value": "latest",
+        "value": "v0",
         "description": "Version of misconception data artifact stored in W&B."
     },
     "negative_sample_size": {
         "value": 25,
         "description": "Number of negative samples in each row. Defaults to 10"
     },
-    "num_folds": {
-        "value": 5,
-        "description": "Number of folds to use for cross-validation. Default is 5."
+    "super_set_size_multiplier": {
+        "value": 10,
+        "description": "Multiplier for the super set size. Default is 10."
     },
     "batch_size": {
         "value": 32,
