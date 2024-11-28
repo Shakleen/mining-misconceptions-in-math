@@ -13,7 +13,7 @@ class HardNegativeSamplerV2(AbstractNegativeSampler):
 
     Hard negatives are sampled from a larger set of similar misconceptions. The larger superset
     size is controlled by the `super_set_size_multiplier` parameter. For validation, we sample only the top
-    `sample_size` hard negatives. There is no randomness in validation sampling other than shuffling.
+    `sample_size` hard negatives. There is no randomness in validation sampling.
     """
 
     def __init__(
@@ -50,7 +50,9 @@ class HardNegativeSamplerV2(AbstractNegativeSampler):
             output = self._downsample(output)
 
         output.append(actual_misconception_id)
-        random.shuffle(output)
+
+        if not self.is_validation:
+            random.shuffle(output)
 
         return output
 
@@ -104,8 +106,8 @@ if __name__ == "__main__":
     sampler = HardNegativeSamplerV2(
         sample_size=10,
         misconception_embeddings=misconception_embeddings,
-        is_validation=False,
-        super_set_size=10,
+        is_validation=True,
+        super_set_size_multiplier=10,
     )
 
     for i in range(10):
