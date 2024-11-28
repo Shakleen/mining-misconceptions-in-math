@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 
 from src.constants.column_names import ContrastiveTorchDatasetColumns
 from src.evaluation.map_calculator.map_calculator import MAPCalculator
-from src.model_development.loss_functions import info_nce_loss
+from src.model_development.loss_functions import contrastive_loss
 from src.constants.dll_paths import DLLPaths
 from src.configurations.recall_model_config import RecallModelConfig
 from src.model_development.latent_attention.latent_multi_head_attention import (
@@ -223,7 +223,7 @@ class RecallModel(pl.LightningModule):
         # Shape: [batch_size, 1, hidden_size]
         query = query.unsqueeze(1)
 
-        similarities = torch.sum(query * docs, dim=-1)
+        similarities = F.cosine_similarity(query, docs, dim=2)
         return similarities
 
     def _log_metrics(self, loss: float, accuracy: float, phase: str):
@@ -257,7 +257,7 @@ class RecallModel(pl.LightningModule):
         )
 
         # Cross entropy loss
-        loss = info_nce_loss(similarities, batch[self.TorchColNames.LABEL])
+        loss = contrastive_loss(similarities, batch[self.TorchColNames.LABEL])
 
         # Calculate accuracy
         predictions = torch.argmax(similarities, dim=1)
@@ -295,7 +295,7 @@ class RecallModel(pl.LightningModule):
         )
 
         # Cross entropy loss
-        loss = info_nce_loss(similarities, batch[self.TorchColNames.LABEL])
+        loss = contrastive_loss(similarities, batch[self.TorchColNames.LABEL])
 
         # Calculate accuracy
         predictions = torch.argmax(similarities, dim=1)
