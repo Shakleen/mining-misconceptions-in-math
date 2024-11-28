@@ -281,7 +281,7 @@ class RecallModel(pl.LightningModule):
             ],
             dim=0,
         )
-        self.acc_scores = {25: [], 50: [], 100: [], 250: [], 500: []}
+        self.acc_scores = {25: [], 50: [], 100: [], 250: [], 500: [], 1000: []}
         self.map_scores = []
 
         return super().on_validation_epoch_start()
@@ -325,10 +325,11 @@ class RecallModel(pl.LightningModule):
             )
         )
 
+        max_k = max(self.acc_scores.keys())
+        includes = rankings[:, :max_k] == labels.reshape(-1, 1)
+
         for k in self.acc_scores.keys():
-            self.acc_scores[k].append(
-                (rankings[:, :k] == labels.reshape(-1, 1)).sum(axis=1).mean()
-            )
+            self.acc_scores[k].append(includes[:, :k].sum(axis=1).mean())
 
         return loss
 
