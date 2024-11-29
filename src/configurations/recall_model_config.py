@@ -17,6 +17,7 @@ class RecallModelConfig:
     mlp_ratio: int = 4
     output_dim: int = 1024
     sentence_pooling_method: str = "cls"
+    dropout_p: float = 0.1
 
     @classmethod
     def from_json(cls, json_path: str) -> "RecallModelConfig":

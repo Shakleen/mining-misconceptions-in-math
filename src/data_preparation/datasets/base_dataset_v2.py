@@ -127,18 +127,18 @@ class BaseDatasetV2(AbstractDataset):
         return output
 
     def _add_meta_adata(self, row: pd.Series, output: Dict[str, torch.Tensor]):
-        output[self.TorchColName.META_DATA_QUESTION_ID] = torch.tensor(
-            row[self.CSVColName.QUESTION_ID],
-            dtype=torch.long,
-        )
-        output[self.TorchColName.META_DATA_SUBJECT_ID] = torch.tensor(
-            row[self.CSVColName.SUBJECT_ID],
-            dtype=torch.long,
-        )
-        output[self.TorchColName.META_DATA_CONSTRUCT_ID] = torch.tensor(
-            row[self.CSVColName.CONSTRUCT_ID],
-            dtype=torch.long,
-        )
+        # output[self.TorchColName.META_DATA_QUESTION_ID] = torch.tensor(
+        #     row[self.CSVColName.QUESTION_ID],
+        #     dtype=torch.int32,
+        # )
+        # output[self.TorchColName.META_DATA_SUBJECT_ID] = torch.tensor(
+        #     row[self.CSVColName.SUBJECT_ID],
+        #     dtype=torch.int32,
+        # )
+        # output[self.TorchColName.META_DATA_CONSTRUCT_ID] = torch.tensor(
+        #     row[self.CSVColName.CONSTRUCT_ID],
+        #     dtype=torch.int32,
+        # )
         output[self.TorchColName.META_DATA_MISCONCEPTION_ID] = torch.tensor(
             row[self.CSVColName.MISCONCEPTION_ID],
             dtype=torch.long,
@@ -225,21 +225,21 @@ class BaseDatasetV2(AbstractDataset):
         if include_meta_data:
             output.update(
                 {
-                    self.TorchColName.META_DATA_QUESTION_ID: torch.stack(
-                        [
-                            item[self.TorchColName.META_DATA_QUESTION_ID]
-                            for item in batch
-                        ]
-                    ),
-                    self.TorchColName.META_DATA_SUBJECT_ID: torch.stack(
-                        [item[self.TorchColName.META_DATA_SUBJECT_ID] for item in batch]
-                    ),
-                    self.TorchColName.META_DATA_CONSTRUCT_ID: torch.stack(
-                        [
-                            item[self.TorchColName.META_DATA_CONSTRUCT_ID]
-                            for item in batch
-                        ]
-                    ),
+                    # self.TorchColName.META_DATA_QUESTION_ID: torch.stack(
+                    #     [
+                    #         item[self.TorchColName.META_DATA_QUESTION_ID]
+                    #         for item in batch
+                    #     ]
+                    # ),
+                    # self.TorchColName.META_DATA_SUBJECT_ID: torch.stack(
+                    #     [item[self.TorchColName.META_DATA_SUBJECT_ID] for item in batch]
+                    # ),
+                    # self.TorchColName.META_DATA_CONSTRUCT_ID: torch.stack(
+                    #     [
+                    #         item[self.TorchColName.META_DATA_CONSTRUCT_ID]
+                    #         for item in batch
+                    #     ]
+                    # ),
                     self.TorchColName.META_DATA_MISCONCEPTION_ID: torch.stack(
                         [
                             item[self.TorchColName.META_DATA_MISCONCEPTION_ID]

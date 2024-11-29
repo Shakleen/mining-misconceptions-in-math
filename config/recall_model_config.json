@@ -50,5 +50,9 @@
     "sentence_pooling_method": {
         "value": "mean",
         "description": "The method to use for sentence pooling. Default is 'cls'. Can be 'mean', 'cls', 'last', or 'attention'."
+    },
+    "dropout_p": {
+        "value": 0.2,
+        "description": "The dropout rate for the model. Default is 0.1."
     }
 }

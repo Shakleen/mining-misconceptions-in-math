@@ -22,7 +22,7 @@ class QuestionDetailsDataset(Dataset):
         self,
         df: pd.DataFrame,
         tokenizer: AutoTokenizer,
-        max_length: Optional[int] = 64,
+        max_length: Optional[int] = 256,
     ):
         self.df = df
         self.tokenizer = tokenizer

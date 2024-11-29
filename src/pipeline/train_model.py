@@ -192,7 +192,7 @@ def get_loader(
         misconceptions_df=misconception_df,
         tokenizer=tokenizer,
         negative_sampler=sampler,
-        include_meta_data=False,
+        include_meta_data=is_validation,
         question_max_length=data_config.question_max_length,
         misconception_max_length=data_config.misconception_max_length,
     )
@@ -201,7 +201,7 @@ def get_loader(
         batch_size=data_config.batch_size,
         num_workers=data_config.num_workers,
         shuffle=not is_validation,
-        collate_fn=lambda x: dataset.collate_fn(x, False),
+        collate_fn=lambda x: dataset.collate_fn(x, is_validation),
     )
     return data_loader
 

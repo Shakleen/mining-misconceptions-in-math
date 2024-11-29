@@ -316,17 +316,17 @@ class RecallModel(pl.LightningModule):
         rankings = (
             torch.argsort(similarities, dim=-1, descending=True).detach().cpu().numpy()
         )
-        labels = batch[self.TorchColNames.LABEL].detach().cpu().numpy()
+        actual_indices = batch[self.TorchColNames.META_DATA_MISCONCEPTION_ID].detach().cpu().numpy()
         self.map_scores.append(
             self.map_calculator.calculate_batch_map(
-                actual_indices=labels,
+                actual_indices=actual_indices,
                 rankings_batch=rankings,
                 rankings_per_query=25,
             )
         )
 
         max_k = max(self.acc_scores.keys())
-        includes = rankings[:, :max_k] == labels.reshape(-1, 1)
+        includes = rankings[:, :max_k] == actual_indices.reshape(-1, 1)
 
         for k in self.acc_scores.keys():
             self.acc_scores[k].append(includes[:, :k].sum(axis=1).mean())
