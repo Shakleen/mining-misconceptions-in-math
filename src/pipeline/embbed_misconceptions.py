@@ -39,7 +39,7 @@ def create_misconception_dataloader(
     batch_size: int,
     num_workers: int,
 ) -> DataLoader:
-    dataset = MisconceptionDataset(df, tokenizer)
+    dataset = MisconceptionDataset(df, tokenizer, 32)
     return DataLoader(
         dataset,
         batch_size=batch_size,

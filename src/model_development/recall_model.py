@@ -34,6 +34,9 @@ class RecallModel(pl.LightningModule):
 
         self._setup_encoder(config)
 
+    def _setup_encoder(self, config):
+        self.model = self._get_model(config)
+
         if config.sentence_pooling_method == "attention":
             self.latent_attention_layer = LatentMultiHeadAttention(
                 input_dim=self.model.config.hidden_size,
@@ -42,9 +45,6 @@ class RecallModel(pl.LightningModule):
                 num_heads=config.num_heads,
                 mlp_ratio=config.mlp_ratio,
             )
-
-    def _setup_encoder(self, config):
-        self.model = self._get_model(config)
 
     def _get_model(self, config):
         if config.use_lora:

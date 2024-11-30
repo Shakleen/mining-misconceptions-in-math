@@ -1,6 +1,6 @@
 {
     "model_path": {
-        "value": "microsoft/deberta-v3-xsmall",
+        "value": "microsoft/deberta-v3-base",
         "description": "Path to the model to use for training."
     },
     "use_lora": {

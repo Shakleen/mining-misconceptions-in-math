@@ -4,19 +4,19 @@
         "description": "Version of QA pair data artifact stored in W&B."
     },
     "misconception_data_version": {
-        "value": "v0",
+        "value": "latest",
         "description": "Version of misconception data artifact stored in W&B."
     },
     "negative_sample_size": {
-        "value": 25,
+        "value": 16,
         "description": "Number of negative samples in each row. Defaults to 10"
     },
     "super_set_size_multiplier": {
-        "value": 10,
+        "value": 20,
         "description": "Multiplier for the super set size. Default is 10."
     },
     "batch_size": {
-        "value": 32,
+        "value": 16,
         "description": "Batch size for training. Default is 16."
     },
     "num_workers": {
