@@ -56,6 +56,7 @@ def convert_to_qa_pair(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def generate_submission_df(
+    qa_df: pd.DataFrame,
     dataloader: DataLoader,
     misconception_embeddings: torch.Tensor,
     model: TwoTowerModel,
@@ -81,8 +82,6 @@ def generate_submission_df(
             ].tolist()
 
             mids = [" ".join(str(x) for x in ranking) for ranking in rankings]
-
-            print(len(ids), len(mids))
 
             submission_df = pd.concat(
                 [
@@ -116,19 +115,19 @@ def inference(
         misconception_dataloader, model
     )
 
-    return generate_submission_df(dataloader, misconception_embeddings, model)
+    return generate_submission_df(qa_df, dataloader, misconception_embeddings, model)
 
 
 if __name__ == "__main__":
     df = pd.read_csv("data/test-datasetdgy7k5rw.csv")
-    misconceptions_df = pd.read_csv("data/misconceptions-datasetas216_mx.csv")
+    misconceptions_df = pd.read_csv("data/misconception_dataset.csv")
 
     qa_df = convert_to_qa_pair(df)
 
     tokenizer = AutoTokenizer.from_pretrained(".cache/deberta-v3-base/")
     model_config = RecallModelConfig.from_json("config/recall_model_config.json")
     model = TwoTowerModel.load_from_checkpoint(
-        "output_dir/Kaggle_EEDI/351xrmvk/checkpoints/best-checkpoint-0.ckpt",
+        "output_dir/Kaggle_EEDI/ckysjqkp/checkpoints/best-checkpoint.ckpt",
         config=model_config,
     ).eval()
 

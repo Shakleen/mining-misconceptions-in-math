@@ -2,11 +2,7 @@ import torch
 from torch import Tensor
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from transformers import (
-    AutoModel,
-    BitsAndBytesConfig,
-    AutoModelForCausalLM,
-)
+from transformers import AutoModel, BitsAndBytesConfig
 from peft import prepare_model_for_kbit_training
 from peft import LoraConfig, get_peft_model, TaskType
 from torch.utils.data import DataLoader
@@ -48,7 +44,7 @@ class RecallModel(pl.LightningModule):
 
     def _get_model(self, config):
         if config.use_lora:
-            model = AutoModelForCausalLM.from_pretrained(
+            model = AutoModel.from_pretrained(
                 config.model_path,
                 quantization_config=BitsAndBytesConfig(
                     load_in_4bit=True,
@@ -58,25 +54,16 @@ class RecallModel(pl.LightningModule):
                 ),
                 trust_remote_code=True,
             )
-            model = prepare_model_for_kbit_training(self.model)
+            model = prepare_model_for_kbit_training(model)
 
             model = get_peft_model(
                 model,
                 LoraConfig(
                     r=config.lora_r,
                     lora_alpha=config.lora_alpha,
-                    target_modules=[
-                        "q_proj",
-                        "v_proj",
-                        "k_proj",
-                        "o_proj",
-                        "gate_proj",
-                        "up_proj",
-                        "down_proj",
-                    ],
+                    target_modules=["query_proj", "value_proj", "key_proj"],
                     lora_dropout=config.lora_dropout,
                     bias="none",
-                    task_type=TaskType.CAUSAL_LM,
                 ),
             )
         else:
@@ -316,7 +303,9 @@ class RecallModel(pl.LightningModule):
         rankings = (
             torch.argsort(similarities, dim=-1, descending=True).detach().cpu().numpy()
         )
-        actual_indices = batch[self.TorchColNames.META_DATA_MISCONCEPTION_ID].detach().cpu().numpy()
+        actual_indices = (
+            batch[self.TorchColNames.META_DATA_MISCONCEPTION_ID].detach().cpu().numpy()
+        )
         self.map_scores.append(
             self.map_calculator.calculate_batch_map(
                 actual_indices=actual_indices,

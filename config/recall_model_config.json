@@ -1,6 +1,6 @@
 {
     "model_path": {
-        "value": "microsoft/deberta-v3-base",
+        "value": "microsoft/deberta-v3-large",
         "description": "Path to the model to use for training."
     },
     "use_lora": {
@@ -8,19 +8,19 @@
         "description": "Whether to use LoRA for training. Default is false."
     },
     "lora_r": {
-        "value": 8,
+        "value": 16,
         "description": "The rank of the LoRA matrices. Default is 8."
     },
     "lora_alpha": {
-        "value": 32,
+        "value": 64,
         "description": "The scaling factor for the LoRA matrices. Default is 32."
     },
     "lora_dropout": {
-        "value": 0.05,
+        "value": 0.1,
         "description": "The dropout rate for the LoRA matrices. Default is 0.05."
     },
     "learning_rate": {
-        "value": 1e-5,
+        "value": 1e-6,
         "description": "The learning rate for the model. Default is 1e-4."
     },
     "gradient_checkpointing": {

@@ -12,7 +12,7 @@
         "description": "Number of epochs to train the model. Default is 5."
     },
     "patience": {
-        "value": 4,
+        "value": 5,
         "description": "Number of epochs to wait before early stopping. Default is 2."
     },
     "logging_steps": {

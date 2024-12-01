@@ -1,4 +1,5 @@
 import os
+import json
 import argparse
 import gc
 from typing import List, Tuple
@@ -60,6 +61,8 @@ def main(args: argparse.Namespace):
     data_config = DataConfig.from_json("config/data_config.json")
     trainer_config = TrainerConfig.from_json("config/trainer_config.json")
 
+    run_name = f"TT-{wandb.util.generate_id()}"
+
     wandb.init(
         project=WandbProject.PROJECT_NAME,
         job_type="train-two-tower-model",
@@ -70,7 +73,7 @@ def main(args: argparse.Namespace):
             "debug": args.debug,
             "seed": args.seed,
         },
-        name=f"TT-{wandb.util.generate_id()}",
+        name=run_name,
     )
 
     df = load_dataframe_artifact(
@@ -108,6 +111,7 @@ def main(args: argparse.Namespace):
         train_loader,
         val_loader,
         misconception_dataloader,
+        run_name,
     )
 
     wandb.finish()
@@ -212,6 +216,7 @@ def train_model(
     train_loader: DataLoader,
     val_loader: DataLoader,
     misconception_dataloader: DataLoader,
+    run_name: str,
 ) -> TwoTowerModel:
     """Train the recall model.
 
@@ -221,24 +226,34 @@ def train_model(
         train_loader (DataLoader): Training data loader.
         val_loader (DataLoader): Validation data loader.
         misconception_dataloader (DataLoader): Misconception data loader.
+        run_name (str): Name of the run.
     """
+    save_dir = f"output_dir/{run_name}"
+    os.makedirs(save_dir, exist_ok=True)
+    json.dump(
+        model_config.to_dict(),
+        open(os.path.join(save_dir, "model_config.json"), "w"),
+    )
+
     model = TwoTowerModel(model_config)
     model.set_misconception_dataloader(misconception_dataloader)
 
     checkpoint_callback = ModelCheckpoint(
-        monitor=f"val_loss",
-        mode="min",
+        monitor="map@25",
+        mode="max",
         save_top_k=1,
         filename=f"best-checkpoint",
     )
     early_stopping_callback = EarlyStopping(
-        monitor=f"val_loss",
-        mode="min",
+        monitor="map@25",
+        mode="max",
         patience=trainer_config.patience,
     )
     wandb_logger = WandbLogger(
         project=WandbProject.PROJECT_NAME,
         job_type="train-two-tower-model",
+        dir="output_dir",
+        save_dir=save_dir,
     )
     trainer = pl.Trainer(
         accelerator="auto",
