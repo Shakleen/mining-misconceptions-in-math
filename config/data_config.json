@@ -8,15 +8,15 @@
         "description": "Version of misconception data artifact stored in W&B."
     },
     "negative_sample_size": {
-        "value": 16,
+        "value": 25,
         "description": "Number of negative samples in each row. Defaults to 10"
     },
     "super_set_size_multiplier": {
-        "value": 25,
+        "value": 20,
         "description": "Multiplier for the super set size. Default is 10."
     },
     "batch_size": {
-        "value": 2,
+        "value": 4,
         "description": "Batch size for training. Default is 16."
     },
     "num_workers": {

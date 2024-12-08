@@ -19,7 +19,7 @@ from src.configurations.data_config import DataConfig
 from src.configurations.trainer_config import TrainerConfig
 from src.constants.column_names import QAPairCSVColumns
 from src.utils.seed_everything import seed_everything
-from src.model_development.two_tower_model import TwoTowerModel
+from src.model_development.stella_model import StellaModel
 from src.utils.wandb_artifact import load_dataframe_artifact
 from src.data_preparation.datasets.base_dataset_v2 import BaseDatasetV2
 from src.data_preparation.negative_sampler.hard_negative_sampler_v2 import (
@@ -61,7 +61,7 @@ def main(args: argparse.Namespace):
     data_config = DataConfig.from_json("config/data_config.json")
     trainer_config = TrainerConfig.from_json("config/trainer_config.json")
 
-    run_name = f"TT-{wandb.util.generate_id()}"
+    run_name = f"ST-{wandb.util.generate_id()}"
 
     wandb.init(
         project=WandbProject.PROJECT_NAME,
@@ -217,7 +217,7 @@ def train_model(
     val_loader: DataLoader,
     misconception_dataloader: DataLoader,
     run_name: str,
-) -> TwoTowerModel:
+) -> StellaModel:
     """Train the recall model.
 
     Args:
@@ -235,7 +235,7 @@ def train_model(
         open(os.path.join(save_dir, "model_config.json"), "w"),
     )
 
-    model = TwoTowerModel(model_config)
+    model = StellaModel(model_config)
     model.set_misconception_dataloader(misconception_dataloader)
 
     checkpoint_callback = ModelCheckpoint(

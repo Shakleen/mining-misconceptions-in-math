@@ -10,10 +10,7 @@ from src.model_development.recall_model import RecallModel
 
 class StellaModel(RecallModel):
     def _setup_encoder(self, config):
-        self.model = AutoModel.from_pretrained(
-            config.model_path,
-            trust_remote_code=True,
-        )
+        self.model = self._get_model(config)
 
         self.vector_linear = torch.nn.Linear(
             in_features=self.model.config.hidden_size,

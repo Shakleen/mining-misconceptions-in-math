@@ -61,7 +61,7 @@ class RecallModel(pl.LightningModule):
                 LoraConfig(
                     r=config.lora_r,
                     lora_alpha=config.lora_alpha,
-                    target_modules=["query_proj", "value_proj", "key_proj"],
+                    target_modules=["q_proj", "v_proj"],
                     lora_dropout=config.lora_dropout,
                     bias="none",
                 ),

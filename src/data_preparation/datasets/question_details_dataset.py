@@ -28,7 +28,8 @@ class QuestionDetailsDataset(Dataset):
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.query = (
-            "Subject: {subject}"
+            "Instruct: Given subject name, construct name, question, and incorrect answer, retrieve relevant misconceptions."
+            + "\nSubject: {subject}"
             + "\nConstruct: {construct}"
             + "\nQuestion: {question}"
             + "\nIncorrect Answer: {incorrect_answer}"
